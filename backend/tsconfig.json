@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "target": "ES2020", /* Especifica la versión de ECMAScript de destino. */
+        "module": "CommonJS", /* Especifica el sistema de módulos a usar. */
+        "outDir": "./dist", /* Especifica el directorio de salida para los archivos .js. */
+        "strict": true, /* Habilita todas las comprobaciones de tipo estrictas. */
+        "esModuleInterop": true, /* Habilita la interoperabilidad entre CommonJS y módulos ES. */
+        "skipLibCheck": true, /* Omite la comprobación de tipo de todos los archivos .d.ts. */
+        "forceConsistentCasingInFileNames": true, /* Emite un error para las importaciones con mayúsculas y minúsculas inconsistentes. */
+        "paths": {
+            "shared": [
+                "../shared/src"
+            ]
+        }
+    },
+    "include": [
+        "src/**/*" /* Incluye todos los archivos dentro del directorio src. */
+    ],
+    "references": [
+        {
+            "path": "../shared"
+        }
+    ],
+    "exclude": [
+        "node_modules" /* Excluye la carpeta node_modules. */
+    ],
+}
