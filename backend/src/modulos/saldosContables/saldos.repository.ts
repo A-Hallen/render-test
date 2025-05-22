@@ -3,7 +3,7 @@ import { SaldosContables } from './saldos.model';
 
 export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
   constructor() {
-    super('SaldosContables2');
+    super('SaldosContables');
   }
 
   async obtenerSaldosPorOficinaYFecha(
@@ -11,24 +11,42 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
     fechas: Date[]
   ): Promise<SaldosContables[]> {
     try {
-      const fechaConFormato = (fecha: Date) => {
-        const dia = fecha.getDate().toString();
-        const mes = (fecha.getMonth() + 1).toString();
-        const ano = fecha.getFullYear();
-        return `${dia}/${mes}/${ano}`;
-      };
-
-      const querySnapshot = await this.collection
-        .where('codigoOficina', '==', codigoOficina)
-        .where('fecha', 'in', fechas.map(f => fechaConFormato(f)))
-        .get();
-
+      // Convertir fechas a formato string YYYY-MM-DD
+      const fechasFormateadas = fechas.map(f => f.toISOString().split('T')[0]);
+      
+      // Dividir las fechas en lotes de 30 (límite de Firestore para operador 'in')
+      const lotesDeFechas = [];
+      for (let i = 0; i < fechasFormateadas.length; i += 30) {
+        lotesDeFechas.push(fechasFormateadas.slice(i, i + 30));
+      }
+      
+      console.log(`[saldos.repository] Procesando ${fechasFormateadas.length} fechas en ${lotesDeFechas.length} lotes`);
+      
+      // Realizar consultas para cada lote y combinar resultados
       const saldos: SaldosContables[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as SaldosContables;
-        saldos.push(data);
+      
+      // Ejecutar consultas en paralelo para mejorar rendimiento
+      const promesas = lotesDeFechas.map(async (loteFechas) => {
+        const querySnapshot = await this.collection
+          .where('codigoOficina', '==', codigoOficina)
+          .where('fecha', 'in', loteFechas)
+          .get();
+          
+        return querySnapshot;
       });
-
+      
+      // Esperar a que todas las consultas se completen
+      const resultados = await Promise.all(promesas);
+      
+      // Procesar los resultados de todas las consultas
+      resultados.forEach(querySnapshot => {
+        querySnapshot.forEach((doc) => {
+          const data = doc.data() as SaldosContables;
+          saldos.push(data);
+        });
+      });
+      
+      console.log(`[saldos.repository] Total de saldos obtenidos: ${saldos.length}`);
       return saldos;
     } catch (error) {
       console.error('Error al obtener saldos:', error);

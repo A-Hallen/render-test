@@ -76,7 +76,7 @@ const _calcularParteDeLaFormula = (saldos: SaldosContables[], parte: Parte | str
 
         // Calcular valores individuales por cuenta
         saldos.forEach(saldo => {
-            if (parte.some(codigo => saldo.codigoCuentaContable === Number(codigo))) {
+            if (parte.some(codigo => saldo.codigoCuentaContable.toString() === codigo)) {
                 const valor = aplicarValorAbsoluto ? Math.abs(saldo.saldo) : saldo.saldo;
                 valoresPorCuenta[saldo.codigoCuentaContable] = valor;
             }
@@ -155,7 +155,7 @@ const _calcularParteDeLaFormula = (saldos: SaldosContables[], parte: Parte | str
             // Calcular valores individuales por cuenta
             componente.cuentas.forEach(codigo => {
                 saldos.forEach(saldo => {
-                    if (saldo.codigoCuentaContable === Number(codigo)) {
+                    if (saldo.codigoCuentaContable.toString() === codigo) {
                         let valor = aplicarValorAbsoluto ? Math.abs(saldo.saldo) : saldo.saldo;
                         valor = valor * componente.coeficiente;
                         valoresPorCuenta[saldo.codigoCuentaContable] = valor;
@@ -178,18 +178,19 @@ const _calcularParteDeLaFormula = (saldos: SaldosContables[], parte: Parte | str
 }
 
 const _filtrarPorCodigos = (saldos: SaldosContables[], codigos: string[], aplicarValorAbsoluto = false) => {
-    return saldos
-        .filter(s => {
-            // Verificar si alguno de los códigos coincide exactamente con el código de cuenta
-            return codigos.some(codigo =>
-                s.codigoCuentaContable === Number(codigo)
-            );
-        })
-        .reduce((sum, s) => {
-            // Aplicar valor absoluto si es necesario, de lo contrario usar el valor tal cual
-            const valor = aplicarValorAbsoluto ? Math.abs(s.saldo) : s.saldo;
-            return sum + valor;
-        }, 0);
+    const saldosFiltrados = saldos.filter(s => {
+        // Verificar si alguno de los códigos coincide exactamente con el código de cuenta
+        return codigos.some(codigo =>
+            s.codigoCuentaContable.toString() === codigo
+        );
+    })  
+    const saldosReducidos = saldosFiltrados.reduce((sum, s) => {
+        // Aplicar valor absoluto si es necesario, de lo contrario usar el valor tal cual
+        const valor = aplicarValorAbsoluto ? Math.abs(s.saldo) : s.saldo;
+        return sum + valor;
+    }, 0);
+
+    return saldosReducidos;
 }
 
 const _calcularComponenteConCoeficiente = (saldos: SaldosContables[], componente: Componente, aplicarValorAbsoluto = false) => {

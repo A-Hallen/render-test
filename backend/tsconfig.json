@@ -24,4 +24,7 @@
     "exclude": [
         "node_modules" /* Excluye la carpeta node_modules. */
     ],
+    "files": [
+        "src/modulos/auth/types/express.d.ts"
+    ]
 }

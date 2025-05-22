@@ -1,8 +1,13 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { ConfiguracionReporteDTO, ReporteTendenciaResponse } from "shared/src/types/reportes.types";
+import { 
+  ConfiguracionReporteDTO, 
+  ReporteTendenciaResponse,
+  ReporteContabilidadRangoRequest,
+  ReporteContabilidadRangoResponse,
+  adaptarDatosReporte
+} from "shared/src/types/reportes.types";
 import { Calendar, Clock, CalendarRange, X, UserRound } from 'lucide-react';
 import { OficinasDTO } from "shared/src/types/oficinas.types";
-import { ReporteTendenciaRequest } from "shared/src/types/reportes.types";
 import toast from 'react-hot-toast';
 
 export type NuevoReporteHandle = {
@@ -11,7 +16,7 @@ export type NuevoReporteHandle = {
 };
 
 interface NuevoReporteProps {
-  onClose?: () => void;
+  onClose?: (reporteData?: ReporteTendenciaResponse['data']) => void;
   tiposReporte: ConfiguracionReporteDTO[];
   oficinas: OficinasDTO[];
 }
@@ -67,15 +72,16 @@ export const NuevoReporteView = forwardRef<NuevoReporteHandle, NuevoReporteProps
 
       try {
         setCreandoReporte(true);
-        const req: ReporteTendenciaRequest = {
-          tipo: selectedTipo,
-          oficina: selectedOficina,
-          periodo: periodo,
+        // Crear la solicitud para el endpoint /rango
+        const req: ReporteContabilidadRangoRequest = {
           fechaInicio: fechaInicio,
-          fechaFin: fechaFin
+          fechaFin: fechaFin,
+          oficina: selectedOficina,
+          nombreConfiguracion: selectedTipo?.nombre || '',
+          tipoReporte: periodo
         };
         
-        const response = await fetch("api/reportes/tendencia", {
+        const response = await fetch("api/reportes/contabilidad/rango", {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -84,7 +90,7 @@ export const NuevoReporteView = forwardRef<NuevoReporteHandle, NuevoReporteProps
         })
 
 
-        const responseData: ReporteTendenciaResponse | { success: boolean; message: string; } = await response.json();
+        const responseData: ReporteContabilidadRangoResponse = await response.json();
         
         if (!responseData.success) {
           toast.error(responseData.message || 'Error al crear el reporte');
@@ -92,6 +98,14 @@ export const NuevoReporteView = forwardRef<NuevoReporteHandle, NuevoReporteProps
         }
         
         toast.success("Reporte creado exitosamente");
+        
+        // Pasar los datos del reporte al componente padre
+        if ('data' in responseData && responseData.data) {
+          // Adaptar los datos al formato esperado por los componentes frontend
+          const datosAdaptados = adaptarDatosReporte(responseData.data);
+          onClose?.(datosAdaptados);
+          return;
+        }
       } catch (error) {
         console.error('Error creating report:', error);
         toast.error("Error al crear el reporte");
@@ -146,7 +160,7 @@ export const NuevoReporteView = forwardRef<NuevoReporteHandle, NuevoReporteProps
               >
                 <option value="">Selecciona una oficina</option>
                 {oficinas?.map((oficina) => (
-                  <option key={oficina.nombre} value={oficina.nombre}>
+                  <option key={oficina.codigo} value={oficina.codigo}>
                     {oficina.nombre}
                   </option>
                 ))}

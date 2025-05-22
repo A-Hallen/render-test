@@ -1,31 +1,89 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 
 export const Login: React.FC = () => {
+  // Estados para formulario
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  
+  // Estado local para validación de formulario
+  const [validationError, setValidationError] = useState<string | null>(null);
+  
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading, error: authError, clearError } = useAuth();
+  
+  useEffect(() => {
+    // Si ya está autenticado, redirigir al dashboard
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  /**
+   * Maneja el envío del formulario de login
+   * @param e Evento del formulario
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    if (!email || !password) {
-      setError('Por favor, ingrese email y contraseña');
+    
+    // Limpiar errores previos
+    clearError();
+    setValidationError(null);
+    
+    // Validación de campos
+    let hasErrors = false;
+    let validationErrors = [];
+    
+    if (!email) {
+      validationErrors.push('El email es requerido');
+      hasErrors = true;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      validationErrors.push('El formato del email es inválido');
+      hasErrors = true;
+    }
+    
+    if (!password) {
+      validationErrors.push('La contraseña es requerida');
+      hasErrors = true;
+    } else if (password.length < 6) {
+      validationErrors.push('La contraseña debe tener al menos 6 caracteres');
+      hasErrors = true;
+    }
+    
+    // Si hay errores de validación, mostrarlos y detener el proceso
+    if (hasErrors) {
+      setValidationError(validationErrors[0]);
       return;
     }
 
-    // Simulate login
-    if (email === 'admin@example.com' && password === 'password') {
-      login({ name: 'Administrador', email, role: 'Administrador' });
-      navigate('/');
-    } else {
-      setError('Credenciales incorrectas');
+    try {
+      // Intentar iniciar sesión
+      await login(email, password);
+      // La redirección se maneja en el useEffect
+    } catch (error: any) {
+      // Los errores de autenticación se manejan en el contexto
+      // No es necesario hacer nada aquí ya que el contexto actualiza el estado de error
+    }
+  };
+  
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      return;
+    }
+    
+    try {
+      // Implementar cuando se necesite
+      setResetEmailSent(true);
+    } catch (error) {
+      console.error('Error al solicitar restablecimiento:', error);
     }
   };
 
@@ -50,9 +108,11 @@ export const Login: React.FC = () => {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                {error}
+            {/* Mostrar errores de validación o autenticación */}
+            {(validationError || authError) && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>{validationError || authError}</span>
               </div>
             )}
 
@@ -122,18 +182,30 @@ export const Login: React.FC = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <button 
+                  type="button" 
+                  onClick={() => setShowForgotPassword(true)} 
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   ¿Olvidó su contraseña?
-                </a>
+                </button>
               </div>
             </div>
 
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={isLoading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed"
               >
-                Iniciar sesión
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  'Iniciar sesión'
+                )}
               </button>
             </div>
           </form>
@@ -157,6 +229,68 @@ export const Login: React.FC = () => {
               </p>
             </div>
           </div>
+          
+          {/* Modal de recuperación de contraseña */}
+          {showForgotPassword && (
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Recuperar contraseña</h3>
+                
+                {resetEmailSent ? (
+                  <div className="text-center py-4">
+                    <div className="mb-4 text-green-500 flex justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="mb-4">Se ha enviado un correo electrónico con instrucciones para restablecer su contraseña.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPassword(false);
+                        setResetEmailSent(false);
+                      }}
+                      className="w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Volver al inicio de sesión
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword}>
+                    <div className="mb-4">
+                      <label htmlFor="recovery-email" className="block text-sm font-medium text-gray-700 mb-1">
+                        Correo electrónico
+                      </label>
+                      <input
+                        id="recovery-email"
+                        type="email"
+                        value={forgotPasswordEmail}
+                        onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="nombre@cooperativa.fin.ec"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(false)}
+                        className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        Enviar instrucciones
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

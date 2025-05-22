@@ -6,3 +6,7 @@ shared/node_modules
 shared/dist
 .vscode/settings.json
 shared/tsconfig.tsbuildinfo
+node_modules/.bin/crc32
+backend/exports
+backend/data
+backend/package-lock.json

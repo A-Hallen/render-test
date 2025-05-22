@@ -60,7 +60,6 @@ export const CrearEditarConfiguracionView = forwardRef<
       const cuentasFiltradasInicial: { [key: number]: CuentaData[] } = {};
 
       // Inicializar los estados de búsqueda para cada categoría
-      console.log("cat", configuracionExistente.categorias)
       configuracionExistente.categorias?.forEach((_, index) => {
         busquedaInicial[index] = '';
         cuentasFiltradasInicial[index] = [];
@@ -111,7 +110,7 @@ export const CrearEditarConfiguracionView = forwardRef<
     const cargarCuentas = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/reportes/cuentas");
+        const response = await fetch("/api/configuracion-reportes/contabilidad/cuentas");
         const data = await response.json();
         setCuentas(data.cuentas || []);
       } catch (error) {

@@ -1,12 +1,12 @@
 import { Model, DataTypes } from 'sequelize';
-import { sequelize } from '../../database/database.connection';
-import { TABLA_CONFIGURACIONES_REPORTES } from '../../database/database.constants';
+import { sequelize } from '../../../database/database.connection';
+import { TABLA_CONFIGURACIONES_REPORTES } from '../../../database/database.constants';
 
 /**
- * Modelo para representar una configuración de reporte
- * Este modelo define la estructura de una configuración de reporte, incluyendo sus categorías y estado.
+ * Modelo para representar una configuración de reporte de contabilidad
+ * Este modelo define la estructura de una configuración de reporte de contabilidad, incluyendo sus categorías y estado.
  */
-export class ConfiguracionReporte extends Model {
+export class ConfiguracionReporteContabilidad extends Model {
     public nombre!: string;
     public descripcion!: string | null;
     public categorias!: {
@@ -19,7 +19,7 @@ export class ConfiguracionReporte extends Model {
 
     /**
      * Valida que los datos del modelo sean correctos.
-     * @returns {boolean} Verdadero si los datos son     válidos.
+     * @returns {boolean} Verdadero si los datos son válidos.
      */
     public esValido(): boolean {
         if (!this.nombre || this.nombre.trim() === '') {
@@ -44,7 +44,7 @@ export class ConfiguracionReporte extends Model {
     }
 }
 
-ConfiguracionReporte.init(
+ConfiguracionReporteContabilidad.init(
     {
         nombre: {
             type: DataTypes.STRING,
@@ -83,7 +83,7 @@ ConfiguracionReporte.init(
     },
     {
         sequelize,
-        modelName: 'ConfiguracionReporte',
+        modelName: 'ConfiguracionReporteContabilidad',
         tableName: TABLA_CONFIGURACIONES_REPORTES,
         timestamps: true,
         createdAt: 'fechaCreacion',

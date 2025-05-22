@@ -3,21 +3,21 @@ import {
   CuentaData,
   ReporteTendenciaRequest,
 } from "shared/src/types/reportes.types";
-import { BaseRepository } from "../../base/base.repository";
-import { ConfiguracionReporte } from "./reportes.model";
-import { SaldosRepository } from "../saldosContables/saldos.repository";
-import { SaldosContables } from "../saldosContables/saldos.model";
-import { sequelize } from "../../database/database.connection";
+import { BaseRepository } from "../../../base/base.repository";
+import { ConfiguracionReporteContabilidad } from "./configuracion-reportes-contabilidad.model";
+import { SaldosRepository } from "../../saldosContables/saldos.repository";
+import { SaldosContables } from "../../saldosContables/saldos.model";
+import { sequelize } from "../../../database/database.connection";
 import { QueryTypes, WhereOptions } from "sequelize";
 import {
   TABLA_CONFIGURACIONES_REPORTES,
   TABLA_CUENTACONTABLE,
   TABLA_DIVISION,
-} from "../../database/database.constants";
+} from "../../../database/database.constants";
 
-export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
+export class ConfiguracionReportesContabilidadRepository extends BaseRepository<ConfiguracionReporteContabilidad> {
   constructor() {
-    super(ConfiguracionReporte);
+    super(ConfiguracionReporteContabilidad);
     this.saldosRepository = new SaldosRepository();
     this.sequelize = sequelize;
   }
@@ -169,18 +169,6 @@ export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
     return cuentaData;
   };
 
-  /**
-   * Formatea una fecha a formato YYYY-MM-DD
-   * @param {Date} fecha - Fecha a formatear
-   * @returns {string} - Fecha formateada
-   */
-  formatearFecha(fecha: Date) {
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, "0");
-    const day = String(fecha.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
   generarFechasPorPeriodo(
     fechaDesde: string,
     fechaHasta: string,
@@ -199,13 +187,13 @@ export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
         1
       );
 
-      // Generar todos los fines de mes hasta llegar al mes y au00f1o de la fecha final
+      // Generar todos los fines de mes hasta llegar al mes y año de la fecha final
       while (
         mesActual.getFullYear() < fechaFin.getFullYear() ||
         (mesActual.getFullYear() === fechaFin.getFullYear() &&
           mesActual.getMonth() < fechaFin.getMonth())
       ) {
-        // Obtener el u00faltimo du00eda del mes actual
+        // Obtener el último día del mes actual
         const ultimoDiaMes = new Date(
           mesActual.getFullYear(),
           mesActual.getMonth() + 1,
@@ -213,7 +201,7 @@ export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
         );
         // Solo agregar la fecha si es mayor o igual a la fecha de inicio
         if (ultimoDiaMes >= fechaInicio) {
-          fechas.push(this.formatearFecha(ultimoDiaMes));
+          fechas.push(ultimoDiaMes.toISOString().split('T')[0]);
         }
 
         // Avanzar al siguiente mes
@@ -224,11 +212,11 @@ export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
         );
       }
 
-      // Cuando llegamos al mes y au00f1o de la fecha final, usamos directamente fechaHasta
+      // Cuando llegamos al mes y año de la fecha final, usamos directamente fechaHasta
       // Asegurarse de que estamos usando la fecha correcta
       const fechaFinFormateada = fechaHasta; // Usar directamente el string original
 
-      // Solo agregar si no estu00e1 ya incluida
+      // Solo agregar si no está ya incluida
       if (!fechas.includes(fechaFinFormateada)) {
         fechas.push(fechaFinFormateada);
         // Ordenar fechas cronológicamente
@@ -253,7 +241,7 @@ export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
 
       const fechaActual = new Date(fechaInicio);
       while (fechaActual <= fechaFin) {
-        fechas.push(this.formatearFecha(fechaActual));
+        fechas.push(fechaActual.toISOString().split('T')[0]);
         fechaActual.setDate(fechaActual.getDate() + 1);
       }
 
@@ -285,7 +273,7 @@ export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
   };
 
   eliminarConfiguracion = async (configuracion: ConfiguracionReporteDTO) => {
-    console.log("[ReportesRepository] eliminando configuracion... ", configuracion);
+    console.log("[ConfiguracionReportesContabilidadRepository] eliminando configuracion... ", configuracion);
     const whereCondition: WhereOptions = { nombre: configuracion.nombre };
     const result = await this.model.destroy({ where: whereCondition });
     return result > 0;

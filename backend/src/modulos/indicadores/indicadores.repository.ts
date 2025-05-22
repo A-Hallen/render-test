@@ -29,10 +29,11 @@ export class IndicadoresRepository extends BaseFirebaseRepository<Indicador> {
     const indicadores = await this.obtenerTodos();
     const saldosContables = await calcularSaldosContables(
       indicadores,
-      oficina,
+      oficina,  
       fechaInicio,
       fechaFin
     );
+    console.log("saldos extraidos", saldosContables.length);
     const indicadoresPorFecha = indicadoresCalculadosPorfecha(
       saldosContables,
       indicadores

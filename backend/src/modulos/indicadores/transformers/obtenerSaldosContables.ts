@@ -25,8 +25,7 @@ export const calcularSaldosContables = async (
   const indicadoresPorFecha: { [key: string]: IndicadorCalculado[] } = {};
 
   Object.entries(saldosPorFecha).forEach(([fecha, saldos]) => {
-    const [dia, mes, ano] = fecha.split('/').map(v => parseInt(v));
-    const fechaObj = new Date(ano, mes - 1, dia);
+    const fechaObj = new Date(fecha);
     const fechaStr = fechaObj.toISOString().split('T')[0];
     console.log("fecha", fechaStr, saldos.length);
     const indicadoresCalculados: IndicadorCalculado[] = [];

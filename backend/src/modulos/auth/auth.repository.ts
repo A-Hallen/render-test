@@ -1,0 +1,503 @@
+import * as admin from 'firebase-admin';
+import axios from 'axios';
+import * as nodemailer from 'nodemailer';
+import path from 'path';
+import fs from 'fs';
+import { BaseFirebaseRepository } from '../../base/base.firebaseRepository';
+import { User, UserRole, UserUpdateData, AuthApiResponse } from './interfaces/user.interface';
+import * as dotenv from 'dotenv';
+
+// Cargar variables de entorno
+dotenv.config();
+
+export class AuthRepository extends BaseFirebaseRepository<User> {
+  private auth: admin.auth.Auth;
+  private readonly FIREBASE_API_KEY: string;
+  
+  constructor() {
+    super('users'); // Nombre de la colección en Firestore
+    this.auth = admin.auth();
+    this.FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || '';
+    
+    if (!this.FIREBASE_API_KEY) {
+      console.warn('ADVERTENCIA: FIREBASE_API_KEY no está configurada en las variables de entorno');
+    }
+  }
+
+  /**
+   * Crea un nuevo usuario en Firebase Authentication y Firestore
+   */
+  async createUser(email: string, password: string, displayName: string, role: UserRole = UserRole.USER): Promise<User> {
+    try {
+      // Crear usuario en Firebase Auth
+      const userRecord = await this.auth.createUser({
+        email,
+        password,
+        displayName,
+        emailVerified: false,
+        disabled: false,
+      });
+
+      // Crear documento de usuario en Firestore con datos adicionales
+      const userData: User = {
+        uid: userRecord.uid,
+        email: userRecord.email || email,
+        displayName: userRecord.displayName || displayName,
+        photoURL: userRecord.photoURL || '',
+        role,
+        permissions: this.getDefaultPermissionsForRole(role),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        emailVerified: userRecord.emailVerified || false,
+        disabled: userRecord.disabled || false,
+      };
+
+      // Guardar en Firestore usando el UID como ID del documento
+      await this.collection.doc(userRecord.uid).set(userData);
+
+      // Establecer claims personalizados para JWT
+      await this.auth.setCustomUserClaims(userRecord.uid, {
+        role,
+        permissions: this.getDefaultPermissionsForRole(role),
+      });
+
+      return userData;
+    } catch (error) {
+      console.error('Error al crear usuario:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene un usuario por su ID
+   */
+  async getUserById(uid: string): Promise<User | null> {
+    try {
+      // Obtener datos de Firebase Auth
+      const userRecord = await this.auth.getUser(uid);
+      
+      // Obtener datos adicionales de Firestore
+      const userDoc = await this.collection.doc(uid).get();
+      
+      if (!userDoc.exists) {
+        return null;
+      }
+
+      const userData = userDoc.data() as User;
+      
+      // Combinar datos de Auth y Firestore
+      return {
+        ...userData,
+        email: userRecord.email || userData.email,
+        displayName: userRecord.displayName || userData.displayName,
+        photoURL: userRecord.photoURL || userData.photoURL,
+        emailVerified: userRecord.emailVerified,
+        disabled: userRecord.disabled,
+      };
+    } catch (error) {
+      console.error('Error al obtener usuario por ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene un usuario por su email
+   */
+  async getUserByEmail(email: string): Promise<User | null> {
+    try {
+      const userRecord = await this.auth.getUserByEmail(email);
+      return this.getUserById(userRecord.uid);
+    } catch (error) {
+      if ((error as any).code === 'auth/user-not-found') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Actualiza los datos de un usuario
+   */
+  async updateUser(uid: string, userData: UserUpdateData): Promise<User | null> {
+    try {
+      // Actualizar en Firebase Auth
+      const authUpdateData: admin.auth.UpdateRequest = {};
+      
+      if (userData.displayName) authUpdateData.displayName = userData.displayName;
+      if (userData.photoURL) authUpdateData.photoURL = userData.photoURL;
+      if (userData.disabled !== undefined) authUpdateData.disabled = userData.disabled;
+      
+      await this.auth.updateUser(uid, authUpdateData);
+      
+      // Actualizar en Firestore
+      const updateData = {
+        ...userData,
+        updatedAt: Date.now()
+      };
+      
+      await this.collection.doc(uid).update(updateData);
+      
+      // Si se actualizó el rol, actualizar también los claims
+      if (userData.role) {
+        const permissions = userData.permissions || this.getDefaultPermissionsForRole(userData.role);
+        await this.auth.setCustomUserClaims(uid, {
+          role: userData.role,
+          permissions
+        });
+      }
+      
+      // Obtener usuario actualizado
+      return this.getUserById(uid);
+    } catch (error) {
+      console.error('Error al actualizar usuario:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Actualiza el rol de un usuario
+   */
+  async updateUserRole(uid: string, role: UserRole): Promise<User | null> {
+    return this.updateUser(uid, {
+      role,
+      permissions: this.getDefaultPermissionsForRole(role)
+    });
+  }
+
+  /**
+   * Elimina un usuario
+   */
+  async deleteUser(uid: string): Promise<boolean> {
+    try {
+      // Eliminar de Firebase Auth
+      await this.auth.deleteUser(uid);
+      
+      // Eliminar de Firestore
+      await this.collection.doc(uid).delete();
+      
+      return true;
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene todos los usuarios
+   */
+  async getAllUsers(limit: number = 1000): Promise<User[]> {
+    try {
+      // Obtener lista de usuarios de Firebase Auth
+      const listUsersResult = await this.auth.listUsers(limit);
+      
+      // Obtener datos adicionales de Firestore para cada usuario
+      const users: User[] = [];
+      
+      for (const userRecord of listUsersResult.users) {
+        const userDoc = await this.collection.doc(userRecord.uid).get();
+        
+        if (userDoc.exists) {
+          const userData = userDoc.data() as User;
+          users.push({
+            ...userData,
+            email: userRecord.email || userData.email,
+            displayName: userRecord.displayName || userData.displayName,
+            photoURL: userRecord.photoURL || userData.photoURL,
+            emailVerified: userRecord.emailVerified,
+            disabled: userRecord.disabled,
+          });
+        }
+      }
+      
+      return users;
+    } catch (error) {
+      console.error('Error al obtener todos los usuarios:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Genera un token JWT personalizado para un usuario
+   */
+  async generateCustomToken(uid: string): Promise<string> {
+    try {
+      return await this.auth.createCustomToken(uid);
+    } catch (error) {
+      console.error('Error al generar token personalizado:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica un token ID de Firebase
+   */
+  async verifyIdToken(idToken: string): Promise<admin.auth.DecodedIdToken> {
+    try {
+      return await this.auth.verifyIdToken(idToken);
+    } catch (error) {
+      console.error('Error al verificar token ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Envía un correo de verificación de email al usuario
+   * Utiliza el método recomendado por Firebase con Nodemailer para el envío de correos
+   */
+  async sendEmailVerification(email: string): Promise<void> {
+    try {
+      // Obtener el usuario por email
+      const userRecord = await this.auth.getUserByEmail(email);
+      
+      if (!userRecord) {
+        throw { code: 'auth/user-not-found', message: 'Usuario no encontrado' };
+      }
+      
+      // Verificar si el usuario ya está verificado
+      if (userRecord.emailVerified) {
+        console.log(`El email ${email} ya está verificado`);
+        return;
+      }
+      
+      // Configurar las opciones para el enlace de verificación
+      const actionCodeSettings = {
+        // URL a la que se redirigirá después de verificar el correo
+        // Debe incluir la ruta completa a la página de verificación
+        url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`,
+        // Esta opción debe ser false para que Firebase incluya el oobCode como parámetro en la URL
+        handleCodeInApp: false
+      };
+      
+      try {
+        // Generar un token de verificación personalizado usando el UID del usuario
+        // Este enfoque es más directo que depender del comportamiento de Firebase
+        const customToken = userRecord.uid;
+        
+        // Crear un enlace de verificación personalizado que incluya el token
+        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?oobCode=${customToken}`;
+        
+        console.log(`Enlace de verificación generado: ${verificationLink}`);
+        
+        // Leer la plantilla HTML del correo de verificación
+        const templatePath = path.join(__dirname, '../../templates/email/verification-email.html');
+        let htmlTemplate = fs.readFileSync(templatePath, 'utf-8');
+        
+        // Reemplazar la variable de enlace en la plantilla
+        htmlTemplate = htmlTemplate.replace(/{{verificationLink}}/g, verificationLink);
+        
+        // Configurar el transporte de email con Nodemailer
+        const transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.EMAIL_PORT || '587'),
+          secure: process.env.EMAIL_SECURE === 'true',
+          auth: {
+            user: process.env.EMAIL_USER || '',
+            pass: process.env.EMAIL_PASSWORD || ''
+          }
+        });
+        
+        // Configurar el contenido del email
+        const mailOptions = {
+          from: process.env.EMAIL_FROM || 'noreply@cooperativa.fin.ec',
+          to: email,
+          subject: 'Verifica tu dirección de email - Cooperativa de Ahorro y Crédito',
+          html: htmlTemplate
+        };
+        
+        // Verificar si las credenciales de email están configuradas
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+          // Si no hay credenciales, simplemente mostramos el enlace en la consola
+          console.log(`Enlace de verificación para ${email}: ${verificationLink}`);
+          console.warn('ADVERTENCIA: Credenciales de email no configuradas. El correo no se envió.');
+          console.warn('Configura EMAIL_USER y EMAIL_PASSWORD en las variables de entorno para enviar correos reales.');
+          return;
+        }
+        
+        // Enviar el email
+        await transporter.sendMail(mailOptions);
+        console.log(`Correo de verificación enviado a ${email}`);
+      } catch (error) {
+        console.error('Error al generar/enviar enlace de verificación:', error);
+        
+        // Si hay un error con Firebase o el envío de correo, informamos al usuario
+        throw { 
+          code: 'auth/email-verification-failed', 
+          message: 'No se pudo enviar el correo de verificación. Por favor, inténtalo más tarde.'
+        };
+      }
+      
+      return;
+    } catch (error) {
+      console.error('Error al enviar correo de verificación:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Verifica el email de un usuario usando un código de verificación
+   * 
+   * En nuestro enfoque personalizado, el código de verificación es simplemente el UID del usuario.
+   * Este método marca el email del usuario como verificado en Firebase Auth y Firestore.
+   */
+  async verifyEmail(oobCode: string): Promise<boolean> {
+    try {
+      console.log(`Procesando código de verificación: ${oobCode}`);
+      
+      // En nuestro enfoque personalizado, el oobCode es el UID del usuario
+      try {
+        // Verificar si el código corresponde a un UID válido
+        const userRecord = await this.auth.getUser(oobCode);
+        
+        // Si llegamos aquí, el UID es válido
+        console.log(`Usuario encontrado: ${userRecord.email}`);
+        
+        // Verificar si el email ya está verificado
+        if (userRecord.emailVerified) {
+          console.log(`El email ${userRecord.email} ya está verificado`);
+          return true;
+        }
+        
+        // Marcar el email como verificado en Firebase Auth
+        await this.auth.updateUser(oobCode, {
+          emailVerified: true
+        });
+        
+        // Actualizar también en Firestore
+        await this.collection.doc(oobCode).update({
+          emailVerified: true,
+          updatedAt: Date.now()
+        });
+        
+        console.log(`Email ${userRecord.email} verificado correctamente`);
+        return true;
+      } catch (error) {
+        console.error('Error al verificar email:', error);
+        
+        // Si hay un error, intentamos un enfoque alternativo
+        // Esto puede ocurrir si el oobCode no es un UID válido
+        // En ese caso, podemos intentar buscar al usuario por email si tenemos esa información
+        
+        // Como no tenemos acceso a más información en este punto, devolvemos false
+        return false;
+      }
+    } catch (error) {
+      console.error('Error general al verificar email:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Autentica a un usuario con email y contraseña usando la API REST de Firebase
+   * @param email Email del usuario
+   * @param password Contraseña del usuario
+   * @returns Resultado de la autenticación
+   */
+  async signInWithEmailAndPassword(email: string, password: string): Promise<AuthApiResponse> {
+    try {
+      if (!this.FIREBASE_API_KEY) {
+        throw new Error('FIREBASE_API_KEY no está configurada');
+      }
+
+      // Usar la API REST de Firebase para autenticar
+      const response = await axios.post(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${this.FIREBASE_API_KEY}`,
+        {
+          email,
+          password,
+          returnSecureToken: true
+        }
+      );
+
+      return {
+        success: true,
+        message: 'Autenticación exitosa',
+        data: response.data
+      };
+    } catch (error: any) {
+      console.error('Error en autenticación con Firebase:', error.response?.data || error.message);
+      
+      // Manejar errores específicos de Firebase Auth
+      const errorCode = error.response?.data?.error?.message || 'auth/unknown-error';
+      const errorMessage = this.getFirebaseAuthErrorMessage(errorCode);
+      
+      return {
+        success: false,
+        code: errorCode,
+        message: errorMessage
+      };
+    }
+  }
+
+  /**
+   * Actualiza la marca de tiempo del último inicio de sesión del usuario
+   * @param uid ID del usuario
+   */
+  async updateLastLogin(uid: string): Promise<void> {
+    try {
+      await this.collection.doc(uid).update({
+        lastLoginAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      console.error('Error al actualizar último inicio de sesión:', error);
+      // No lanzamos el error para no interrumpir el flujo de login
+    }
+  }
+
+  /**
+   * Obtiene un mensaje de error amigable basado en el código de error de Firebase Auth
+   * @param errorCode Código de error de Firebase Auth
+   * @returns Mensaje de error amigable
+   */
+  private getFirebaseAuthErrorMessage(errorCode: string): string {
+    switch (errorCode) {
+      case 'auth/invalid-email':
+        return 'El formato del email no es válido';
+      case 'auth/user-disabled':
+        return 'Esta cuenta ha sido deshabilitada';
+      case 'auth/user-not-found':
+        return 'No existe una cuenta con este email';
+      case 'auth/wrong-password':
+        return 'Contraseña incorrecta';
+      case 'auth/email-already-in-use':
+        return 'Este email ya está en uso por otra cuenta';
+      case 'auth/weak-password':
+        return 'La contraseña debe tener al menos 6 caracteres';
+      case 'auth/operation-not-allowed':
+        return 'Operación no permitida';
+      case 'auth/too-many-requests':
+        return 'Demasiados intentos fallidos. Intente más tarde';
+      case 'auth/invalid-credential':
+      case 'auth/invalid-login-credentials':
+        return 'Credenciales inválidas';
+      default:
+        return 'Error de autenticación';
+    }
+  }
+
+  /**
+   * Obtiene los permisos predeterminados para un rol
+   */
+  private getDefaultPermissionsForRole(role: UserRole): string[] {
+    switch (role) {
+      case UserRole.ADMIN:
+        return [
+          'users:read', 'users:write', 'users:delete',
+          'reports:read', 'reports:write', 'reports:delete',
+          'settings:read', 'settings:write'
+        ];
+      case UserRole.EDITOR:
+        return [
+          'users:read',
+          'reports:read', 'reports:write',
+          'settings:read'
+        ];
+      case UserRole.USER:
+      default:
+        return [
+          'reports:read',
+          'settings:read'
+        ];
+    }
+  }
+}

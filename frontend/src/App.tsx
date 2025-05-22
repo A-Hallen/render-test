@@ -13,6 +13,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { DataProvider } from './context/DataContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Login } from './pages/Login';
+import { VerifyEmail } from './pages/VerifyEmail';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
             <Router>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/analysis" element={<Analysis />} />

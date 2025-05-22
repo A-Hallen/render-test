@@ -30,9 +30,9 @@ export class IaController {
     }
 
     async obtenerRespuestaTexto(req: Request, res: Response) {
-        const { message } = req.body;
+        const { message, conversation } = req.body;
         try {
-            const respuesta = await this.iaService.obtenerRespuesta(message, null);
+            const respuesta = await this.iaService.obtenerRespuesta(message, null, conversation);
             res.status(200).json({ message: respuesta });
         } catch (error) {
             console.error("[controller] Error al obtener una respuesta de la ia:", error);
@@ -43,10 +43,13 @@ export class IaController {
     async obtenerRespuestaAudio(req: Request, res: Response) {
         try {
             const buffer = req.file?.buffer; // Assuming the audio blob is sent as a file in the request
+            const { conversation } = req.body;
+            
             if (!buffer) {
                 throw new Error("No se proporcionó un blob de audio");
             }
-            const respuesta = await this.iaService.obtenerRespuesta('', buffer);
+            
+            const respuesta = await this.iaService.obtenerRespuesta('', buffer, conversation);
             res.status(200).json({ message: respuesta });
         } catch (error) {
             console.error("[controller] Error al procesar el blob de audio:", error);

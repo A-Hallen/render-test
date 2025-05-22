@@ -3,6 +3,7 @@ import { FileText, Edit2, Trash, PlusIcon } from "lucide-react";
 import {
   ConfiguracionGuardadaResponse,
   ConfiguracionReporteDTO,
+  ReporteTendenciaResponse
 } from "shared/src/types/reportes.types";
 import {
   CrearEditarConfiguracionView,
@@ -19,6 +20,7 @@ import {
   EliminarConfiguracionDialog,
   EliminarConfiguracionHandle,
 } from "../features/reportes/eliminarReporteDialog";
+import { ReporteContabilidad } from "../features/reportes/reporteContabilidad";
 
 export const Reports: React.FC = () => {
   const [reportesActivos, setReportesActivos] = useState<
@@ -27,6 +29,8 @@ export const Reports: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [oficinas, setOficinas] = useState<OficinasDTO[]>([]);
+  const [reporteContabilidad, setReporteContabilidad] = useState<ReporteTendenciaResponse['data'] | null>(null);
+  const [mostrarReporte, setMostrarReporte] = useState(false);
   const nuevoReporteRef = useRef<NuevoReporteHandle>(null);
   const crearEditarConfiguracionRef =
     useRef<CrearEditarConfiguracionHandle>(null);
@@ -38,7 +42,7 @@ export const Reports: React.FC = () => {
   };
 
   const reload = async () => {
-    const reportesResponse = await fetch("/api/reportes/activos");
+    const reportesResponse = await fetch("/api/configuracion-reportes/contabilidad/activos");
     const reportesData = await reportesResponse.json();
     setReportesActivos(reportesData.configuraciones);
   };
@@ -62,7 +66,7 @@ export const Reports: React.FC = () => {
     const promise = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/reportes/configuracion", {
+        const response = await fetch("/api/configuracion-reportes/contabilidad/configuracion", {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
@@ -92,7 +96,7 @@ export const Reports: React.FC = () => {
     const promise = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/reportes/configuracion", {
+        const response = await fetch("/api/configuracion-reportes/contabilidad/configuracion", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -124,7 +128,7 @@ export const Reports: React.FC = () => {
     const promise = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/reportes/configuracion", {
+        const response = await fetch("/api/configuracion-reportes/contabilidad/configuracion", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -167,7 +171,7 @@ export const Reports: React.FC = () => {
     const fetchReportesActivos = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/reportes/activos");
+        const response = await fetch("/api/configuracion-reportes/contabilidad/activos");
         const data = await response.json();
         setReportesActivos(data.configuraciones);
       } catch (error) {
@@ -180,21 +184,18 @@ export const Reports: React.FC = () => {
     fetchReportesActivos();
   }, []);
 
-  const handleNewReportClosed = () => {
-    // Refresh the list after creating a new report
-    const fetchReportesActivos = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/reportes/activos");
-        const data = await response.json();
-        setReportesActivos(data.configuraciones);
-      } catch (error) {
-        console.error("Error fetching active reports:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchReportesActivos();
+  const handleNewReportClosed = async (reporteData?: ReporteTendenciaResponse['data']) => {
+    // Si hay datos de reporte, mostrarlos directamente
+    if (reporteData) {
+      // Usar directamente los datos del reporte que ya tenemos
+      setReporteContabilidad(reporteData);
+      setMostrarReporte(true);
+    }
+  };
+  
+  const cerrarReporte = () => {
+    setMostrarReporte(false);
+    setReporteContabilidad(null);
   };
 
   const filteredReports = reportesActivos?.filter((report) => {
@@ -382,6 +383,13 @@ export const Reports: React.FC = () => {
           saveNewConfiguration(config);
         }}
       />
+      {mostrarReporte && reporteContabilidad && (
+        <ReporteContabilidad 
+          reporteData={reporteContabilidad} 
+          onClose={cerrarReporte} 
+        />
+      )}
+      
       <NuevoReporteView
         oficinas={oficinas}
         ref={nuevoReporteRef}

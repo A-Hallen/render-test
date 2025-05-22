@@ -41,12 +41,19 @@ export const ChatInterface: React.FC = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    
+    // Prepare conversation history for context
+    const conversationHistory = messages.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'model',
+      content: msg.text
+    }));
 
     const formData = new FormData();
     const audioFile = new File([audioBlob], 'audio.mp3', {
       type: 'audio/mpeg' // Ajusta el tipo MIME según tu formato de audio
     });
     formData.append('audio', audioFile);
+    formData.append('conversation', JSON.stringify(conversationHistory));
 
     fetch('api/chat/audio', {
       method: 'POST',
@@ -113,13 +120,28 @@ export const ChatInterface: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsLoading(true);
+    
+    // Prepare conversation history for context
+    const conversationHistory = messages.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'model',
+      content: msg.text
+    }));
+    
+    // Add the current message
+    conversationHistory.push({
+      role: 'user',
+      content: inputText
+    });
 
     fetch('api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: userMessage.text }),
+      body: JSON.stringify({ 
+        message: userMessage.text,
+        conversation: conversationHistory 
+      }),
     })
       .then((response) => response.json())
       .then((data) => {

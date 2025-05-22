@@ -1,15 +1,16 @@
 import { Request, Response } from 'express';
-import { ReportesService } from './reportes.service';
+import { ConfiguracionReportesContabilidadService } from './configuracion-reportes-contabilidad.service';
 
-export class ReportesController {
-    private reportesService: ReportesService;
+export class ConfiguracionReportesContabilidadController {
+    private configuracionReportesContabilidadService: ConfiguracionReportesContabilidadService;
+    
     constructor() {
-        this.reportesService = new ReportesService();
+        this.configuracionReportesContabilidadService = new ConfiguracionReportesContabilidadService();
     }
 
     async obtenerConfiguracionesActivas(req: Request, res: Response): Promise<void> {
         try {
-            const configuraciones = await this.reportesService.obtenerConfiguracionesActivas();
+            const configuraciones = await this.configuracionReportesContabilidadService.obtenerConfiguracionesActivas();
             res.status(200).json(configuraciones);
         } catch (error) {
             console.error('Error fetching configuraciones activas:', error);
@@ -19,7 +20,7 @@ export class ReportesController {
 
     async obtenerCuentas(req: Request, res: Response): Promise<void> {
         try {
-            const cuentas = await this.reportesService.obtenerCuentas();
+            const cuentas = await this.configuracionReportesContabilidadService.obtenerCuentas();
             res.status(200).json(cuentas);
         } catch (error) {
             console.error('Error fetching cuentas:', error);
@@ -30,7 +31,7 @@ export class ReportesController {
     async generarReporteTendencia(req: Request, res: Response): Promise<void> {
         try {
             const reporteData = req.body;
-            const response = await this.reportesService.generarReporteTendencia(reporteData);
+            const response = await this.configuracionReportesContabilidadService.generarReporteTendencia(reporteData);
             res.status(200).json(response);
         } catch (error) {
             console.error('Error al generar reportes de tendencia', error);
@@ -38,10 +39,12 @@ export class ReportesController {
         }
     }
 
+    // Los métodos relacionados con reportes de contabilidad se han movido a ReportesContabilidadController
+
     async guardarConfiguracion(req: Request, res: Response): Promise<void> {
         try {
             const configuracion = req.body;
-            const response = await this.reportesService.guardarConfiguracion(configuracion);
+            const response = await this.configuracionReportesContabilidadService.guardarConfiguracion(configuracion);
             res.status(200).json(response);
         } catch (error) {
             console.error('Error al guardar configuración', error);
@@ -52,7 +55,7 @@ export class ReportesController {
     async actualizarConfiguracion(req: Request, res: Response): Promise<void> {
         try {
             const configuracion = req.body;
-            const response = await this.reportesService.actualizarConfiguracion(configuracion);
+            const response = await this.configuracionReportesContabilidadService.actualizarConfiguracion(configuracion);
             res.status(200).json(response);
         } catch (error) {
             console.error('Error al actualizar la configuración', error);
@@ -63,13 +66,12 @@ export class ReportesController {
     async eliminarConfiguracion(req: Request, res: Response): Promise<void> {
         try {
             const configuracion = req.body;
-            console.log("[Controller] body: ", configuracion);
-            const response = await this.reportesService.eliminarConfiguracion(configuracion);
+            console.log("[ConfiguracionReportesContabilidadController] body: ", configuracion);
+            const response = await this.configuracionReportesContabilidadService.eliminarConfiguracion(configuracion);
             res.status(200).json(response);
         } catch (error) {
             console.error('Error al eliminar la configuración', error);
             res.status(500).json({error: 'Error eliminando configuración'});
         }
     }
-
 }

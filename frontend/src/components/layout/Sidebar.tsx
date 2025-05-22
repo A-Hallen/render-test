@@ -8,9 +8,10 @@ import {
   Calendar, 
   ChevronLeft,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { UserRole } from '../../types/auth';
 
 export const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -66,17 +67,40 @@ export const Sidebar: React.FC = () => {
         <div className="p-4 border-t border-blue-800">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="h-8 w-8 rounded-full bg-blue-700 flex items-center justify-center">
-                {user?.name?.charAt(0) || 'U'}
-              </div>
+              {user?.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt={user.displayName || 'Usuario'} 
+                  className="h-8 w-8 rounded-full border border-blue-600" 
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-blue-700 flex items-center justify-center">
+                  {user?.displayName?.charAt(0) || 'U'}
+                </div>
+              )}
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium">{user?.name || 'Usuario'}</p>
-              <p className="text-xs text-blue-300">{user?.role || 'Administrador'}</p>
+              <p className="text-sm font-medium truncate max-w-[160px]">{user?.displayName || 'Usuario'}</p>
+              <div className="flex items-center">
+                <span className="text-xs text-blue-300">
+                  {user?.role === UserRole.ADMIN ? 'Administrador' : 
+                   user?.role === UserRole.EDITOR ? 'Editor' : 'Usuario'}
+                </span>
+                {user?.emailVerified ? (
+                  <span className="ml-1.5 text-xs bg-blue-800 text-blue-200 px-1 rounded-sm">
+                    Verificado
+                  </span>
+                ) : (
+                  <span className="ml-1.5 text-xs bg-red-900 text-red-200 px-1 rounded-sm flex items-center">
+                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full mr-0.5 animate-pulse"></span>
+                    No verificado
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
     </aside>
   );
-};
+};  
