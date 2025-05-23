@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAutorizacion } from '../context/AutorizacionContext';
 import { Card, Button, Alert, Spinner, Badge } from '../components/ui';
 import { RefreshCw, Database, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types/auth';
 
 interface EstadoSincronizacion {
   enProceso: boolean;
@@ -16,10 +17,10 @@ export const Sincronizacion: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [tipoMensaje, setTipoMensaje] = useState<'success' | 'error'>('success');
-  const { usuario } = useAutorizacion();
+  const { user } = useAuth();
 
   // Verificar si el usuario tiene permisos de administrador
-  const esAdmin = usuario?.rol === 'administrador' || usuario?.rol === 'gerente_general';
+  const esAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.GERENTE_GENERAL;
 
   // Cargar el estado inicial de sincronización
   useEffect(() => {

@@ -72,7 +72,7 @@ export const authService = {
    * @param userData Datos del nuevo usuario
    * @returns Datos del usuario creado
    */
-  async register(userData: { email: string; password: string; displayName: string }) {
+  async register(userData: { email: string; password: string; displayName: string; role?: string; officeId?: string }) {
     try {
       const response = await fetch(`/api/auth/register`, {
         method: 'POST',

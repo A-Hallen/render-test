@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { KpiFormulaEditor } from '../components/settings/KpiFormulaEditor';
+import { UserManagement } from '../components/settings/UserManagement';
 import {
   Globe,
   User,
@@ -113,6 +114,10 @@ export const Settings: React.FC = () => {
 
             {activeTab === 'indicadores' && (
               <KpiFormulaEditor />
+            )}
+            
+            {activeTab === 'user' && (
+              <UserManagement />
             )}
 
             {activeTab === 'thresholds' && (

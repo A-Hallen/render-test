@@ -8,7 +8,10 @@
 export enum UserRole {
   ADMIN = 'admin',
   USER = 'user',
-  EDITOR = 'editor'
+  EDITOR = 'editor',
+  GERENTE_OFICINA = 'gerente_oficina',
+  GERENTE_GENERAL = 'gerente_general',
+  ANALISTA = 'analista'
 }
 
 /**
@@ -21,6 +24,7 @@ export interface User {
   photoURL?: string;
   role: UserRole;
   permissions?: string[];
+  officeId?: string; // ID de la oficina asociada para gerentes
   createdAt?: number;
   updatedAt?: number;
   emailVerified?: boolean;
@@ -46,6 +50,7 @@ export interface UserUpdateData {
   photoURL?: string;
   role?: UserRole;
   permissions?: string[];
+  officeId?: string; // ID de la oficina asociada para gerentes
   disabled?: boolean;
 }
 
@@ -65,6 +70,7 @@ export interface RegisterRequest {
   password: string;
   displayName: string;
   role?: UserRole;
+  officeId?: string; // ID de la oficina asociada para gerentes
 }
 
 /**

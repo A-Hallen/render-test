@@ -8,8 +8,7 @@ import Visualizacion from '../componentes/Visualizacion';
 import ConfiguradorVisualizacion from '../componentes/ConfiguradorVisualizacion';
 import { DatoFinanciero, ConfiguracionVisualizacion, TipoVisualizacion } from '../modelo/DatoFinanciero';
 import { AdaptadorIndicadores, IndicadorFinanciero } from '../adaptadores/AdaptadorDatos';
-import { useAutorizacion } from '../../../context/AutorizacionContext';
-import { Accion } from '../../../services/AutorizacionService';
+import { useAuth, useFinancialDataAccess, Action } from '../../../context/AuthContext';
 
 /**
  * Componente de demostración para visualizaciones 3D
@@ -24,7 +23,10 @@ const DemoVisualizacion: React.FC = () => {
     metrica: 'valor'
   });
   const [cargando, setCargando] = useState<boolean>(true);
-  const { usuario, puede } = useAutorizacion();
+  const { user } = useAuth();
+  
+  // Obtener el hook para filtrar datos financieros
+  const { filterAllowedData } = useFinancialDataAccess();
   
   // Cargar datos de ejemplo al iniciar
   useEffect(() => {
@@ -34,34 +36,32 @@ const DemoVisualizacion: React.FC = () => {
       const adaptador = new AdaptadorIndicadores();
       const datosAdaptados = adaptador.adaptar(datosEjemplo);
       
-      // Filtrar datos según permisos del usuario
-      const datosFiltrados = datosAdaptados.filter(dato => {
-        // Si no hay usuario o es administrador, mostrar todos los datos
-        if (!usuario || usuario.rol === 'administrador') return true;
-        
-        // Para gerente de oficina, solo mostrar datos de su oficina
-        if (usuario.rol === 'gerente_oficina' && usuario.oficinaId) {
-          return dato.dimensiones.oficina === usuario.oficinaId;
-        }
-        
-        // Verificar permiso para ver el dato
-        return puede(Accion.LEER, { type: 'DatoFinanciero', ...dato });
-      });
+      // Filtrar datos según permisos del usuario usando el nuevo hook
+      const datosFiltrados = filterAllowedData(datosAdaptados);
       
       setDatos(datosFiltrados);
       setCargando(false);
     }, 1500);
-  }, [usuario, puede]);
+  }, [user, filterAllowedData]);
   
   // Manejar cambios en la configuración
   const handleConfiguracionCambiada = (nuevaConfig: ConfiguracionVisualizacion) => {
     setConfiguracion(nuevaConfig);
   };
   
+  // Obtener el hook para verificar acceso a datos financieros
+  const { canAccessFinancialData } = useFinancialDataAccess();
+  
   // Manejar clic en datos
   const handleClickDato = (dato: DatoFinanciero) => {
     console.log('Dato seleccionado:', dato);
+    
+    // Verificar si el usuario puede editar el dato
+    const puedeEditar = canAccessFinancialData(Action.UPDATE, dato);
+    console.log('Puede editar:', puedeEditar);
+    
     // Aquí se podría mostrar un modal con detalles del dato seleccionado
+    // y opciones de edición si el usuario tiene permisos
   };
   
   return (

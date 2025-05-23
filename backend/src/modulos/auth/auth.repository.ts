@@ -27,7 +27,7 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
   /**
    * Crea un nuevo usuario en Firebase Authentication y Firestore
    */
-  async createUser(email: string, password: string, displayName: string, role: UserRole = UserRole.USER): Promise<User> {
+  async createUser(email: string, password: string, displayName: string, role: UserRole = UserRole.USER, officeId?: string): Promise<User> {
     try {
       // Crear usuario en Firebase Auth
       const userRecord = await this.auth.createUser({
@@ -51,15 +51,27 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
         emailVerified: userRecord.emailVerified || false,
         disabled: userRecord.disabled || false,
       };
+      
+      // Agregar officeId solo para usuarios con rol de gerente
+      if (role === UserRole.GERENTE_OFICINA && officeId) {
+        userData.officeId = officeId;
+      }
 
       // Guardar en Firestore usando el UID como ID del documento
       await this.collection.doc(userRecord.uid).set(userData);
 
       // Establecer claims personalizados para JWT
-      await this.auth.setCustomUserClaims(userRecord.uid, {
+      const claims: any = {
         role,
         permissions: this.getDefaultPermissionsForRole(role),
-      });
+      };
+      
+      // Incluir officeId en los claims para gerentes
+      if (role === UserRole.GERENTE_OFICINA && officeId) {
+        claims.officeId = officeId;
+      }
+      
+      await this.auth.setCustomUserClaims(userRecord.uid, claims);
 
       return userData;
     } catch (error) {
@@ -140,10 +152,20 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
       // Si se actualizó el rol, actualizar también los claims
       if (userData.role) {
         const permissions = userData.permissions || this.getDefaultPermissionsForRole(userData.role);
-        await this.auth.setCustomUserClaims(uid, {
+        const claims: any = {
           role: userData.role,
           permissions
-        });
+        };
+        
+        // Incluir officeId en los claims para gerentes
+        if (userData.role === UserRole.GERENTE_OFICINA && userData.officeId) {
+          claims.officeId = userData.officeId;
+        } else if (userData.role !== UserRole.GERENTE_OFICINA) {
+          // Si el rol cambió y ya no es gerente, eliminar officeId de los claims
+          claims.officeId = null;
+        }
+        
+        await this.auth.setCustomUserClaims(uid, claims);
       }
       
       // Obtener usuario actualizado
@@ -484,7 +506,33 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
         return [
           'users:read', 'users:write', 'users:delete',
           'reports:read', 'reports:write', 'reports:delete',
-          'settings:read', 'settings:write'
+          'settings:read', 'settings:write',
+          'office:manage', 'analytics:manage'
+        ];
+      case UserRole.GERENTE_GENERAL:
+        // Gerente general puede ver todo y gestionar algunos datos
+        return [
+          'users:read',
+          'reports:read', 'reports:write', 'reports:delete',
+          'settings:read', 'settings:write',
+          'analytics:manage',
+          'dashboard:full'
+        ];
+      case UserRole.GERENTE_OFICINA:
+        return [
+          'users:read',
+          'reports:read', 'reports:write',
+          'settings:read',
+          'office:manage',
+          'dashboard:office'
+        ];
+      case UserRole.ANALISTA:
+        // Analista solo puede ver datos y generar reportes
+        return [
+          'reports:read', 'reports:write',
+          'settings:read',
+          'analytics:read',
+          'dashboard:read'
         ];
       case UserRole.EDITOR:
         return [

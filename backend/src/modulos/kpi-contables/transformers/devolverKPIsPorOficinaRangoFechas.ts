@@ -72,8 +72,9 @@ export const devolverKPIsPorOficinaRangoFechas = async (
         console.log(`[devolverKPIsPorOficinaRangoFechas] Usando fecha actual: ${fechaInicioObj.toISOString()}`);
       }
       
-      // Generar array de fechas entre inicio y fin en formato YYYY-MM-DD
-      const fechas: string[] = [];
+      // Generar arrays de fechas entre inicio y fin
+      const fechasStr: string[] = [];
+      const fechasDate: Date[] = [];
       const fechaActual = new Date(fechaInicioObj);
       
       // Función para formatear fecha como YYYY-MM-DD
@@ -85,14 +86,15 @@ export const devolverKPIsPorOficinaRangoFechas = async (
       };
       
       while (fechaActual <= fechaFinObj) {
-        fechas.push(formatearFecha(fechaActual));
+        fechasStr.push(formatearFecha(fechaActual));
+        fechasDate.push(new Date(fechaActual));
         fechaActual.setDate(fechaActual.getDate() + 1);
       }
       
-      console.log(`[devolverKPIsPorOficinaRangoFechas] Consultando ${fechas.length} fechas para la oficina ${oficina}`);
-      console.log("fechas", fechas);
+      console.log(`[devolverKPIsPorOficinaRangoFechas] Consultando ${fechasDate.length} fechas para la oficina ${oficina}`);
+      console.log("fechas", fechasStr);
       // Obtener saldos desde el repositorio
-      saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechas);
+      saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechasDate);
       console.log(`[devolverKPIsPorOficinaRangoFechas] Saldos extraídos: ${saldos.length}`);
     } catch (error) {
       console.error(`[devolverKPIsPorOficinaRangoFechas] Error al obtener saldos: ${error}`);

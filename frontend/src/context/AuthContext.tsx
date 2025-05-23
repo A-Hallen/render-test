@@ -1,6 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User } from "../types/auth";
+import { User, UserRole } from "../types/auth";
 import { authService } from "../services/authService";
+
+// Definir tipos de acciones
+export enum Action {
+  CREATE = 'create',
+  READ = 'read',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  MANAGE = 'manage'
+}
+
+// Definir tipos de recursos
+export enum Resource {
+  USERS = 'users',
+  REPORTS = 'reports',
+  SETTINGS = 'settings',
+  OFFICE = 'office',
+  ANALYTICS = 'analytics',
+  DASHBOARD = 'dashboard',
+  FINANCIAL_DATA = 'financial_data'
+}
 
 interface AuthContextType {
   user: User | null;
@@ -14,6 +34,9 @@ interface AuthContextType {
   sendEmailVerification: (email: string) => Promise<void>;
   verifyEmail: (oobCode: string) => Promise<boolean>;
   isEmailVerified: boolean;
+  can: (action: Action, resource: Resource, context?: any) => boolean;
+  canAccessFinancialData: (action: Action, data: any) => boolean;
+  filterAllowedData: <T extends Record<string, any>>(data: T[]) => T[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -190,6 +213,188 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("fincoopToken");
   };
 
+  /**
+   * Verifica si el usuario puede realizar una acción sobre un recurso específico
+   * @param action La acción que se quiere realizar
+   * @param resource El recurso sobre el que se quiere actuar
+   * @param context Contexto adicional para la verificación (ej: ID de oficina)
+   * @returns true si el usuario tiene permiso, false en caso contrario
+   */
+  const can = (action: Action, resource: Resource, context?: any): boolean => {
+    if (!user || !user.permissions) {
+      return false;
+    }
+    
+    // Verificar permisos explícitos primero
+    const hasPermission = checkExplicitPermissions(action, resource, context);
+    if (hasPermission) {
+      return true;
+    }
+    
+    // Verificar permisos basados en rol si no tiene permisos explícitos
+    return checkRoleBasedPermissions(action, resource, context);
+  };
+
+  /**
+   * Verifica permisos explícitos del usuario
+   */
+  const checkExplicitPermissions = (action: Action, resource: Resource, context?: any): boolean => {
+    if (!user || !user.permissions || user.permissions.length === 0) {
+      return false;
+    }
+    
+    // Mapeo de permisos a acciones y recursos
+    const permissionMap: Record<string, { resource: Resource, actions: Action[] }> = {
+      'users:read': { resource: Resource.USERS, actions: [Action.READ] },
+      'users:write': { resource: Resource.USERS, actions: [Action.CREATE, Action.UPDATE] },
+      'users:delete': { resource: Resource.USERS, actions: [Action.DELETE] },
+      
+      'reports:read': { resource: Resource.REPORTS, actions: [Action.READ] },
+      'reports:write': { resource: Resource.REPORTS, actions: [Action.CREATE, Action.UPDATE] },
+      'reports:delete': { resource: Resource.REPORTS, actions: [Action.DELETE] },
+      
+      'settings:read': { resource: Resource.SETTINGS, actions: [Action.READ] },
+      'settings:write': { resource: Resource.SETTINGS, actions: [Action.CREATE, Action.UPDATE] },
+      
+      'office:manage': { resource: Resource.OFFICE, actions: [Action.MANAGE, Action.READ, Action.CREATE, Action.UPDATE] },
+      
+      'analytics:read': { resource: Resource.ANALYTICS, actions: [Action.READ] },
+      'analytics:manage': { resource: Resource.ANALYTICS, actions: [Action.MANAGE, Action.READ, Action.CREATE, Action.UPDATE] },
+      
+      'dashboard:read': { resource: Resource.DASHBOARD, actions: [Action.READ] },
+      'dashboard:office': { resource: Resource.DASHBOARD, actions: [Action.READ] },
+      'dashboard:full': { resource: Resource.DASHBOARD, actions: [Action.MANAGE, Action.READ, Action.CREATE, Action.UPDATE] }
+    };
+    
+    // Verificar si alguno de los permisos del usuario coincide con el recurso y la acción
+    for (const permission of user.permissions) {
+      const mapping = permissionMap[permission];
+      
+      if (!mapping) continue;
+      
+      // Verificar si el permiso aplica al recurso solicitado
+      if (mapping.resource !== resource) continue;
+      
+      // Verificar si el permiso incluye la acción solicitada
+      if (!mapping.actions.includes(action) && !mapping.actions.includes(Action.MANAGE)) {
+        continue;
+      }
+      
+      // Verificar contexto específico si existe
+      if (permission === 'dashboard:office' || permission === 'office:manage') {
+        // Para permisos específicos de oficina, verificar que coincida con la oficina del usuario
+        if (context?.officeId && user.officeId && context.officeId !== user.officeId) {
+          continue;
+        }
+      }
+      
+      return true;
+    }
+    
+    return false;
+  };
+
+  /**
+   * Verifica permisos basados en el rol del usuario
+   */
+  const checkRoleBasedPermissions = (action: Action, resource: Resource, context?: any): boolean => {
+    if (!user) return false;
+    
+    const { role, officeId } = user;
+    
+    // Reglas basadas en roles
+    switch (role) {
+      case UserRole.ADMIN:
+        // Administrador puede hacer todo
+        return true;
+        
+      case UserRole.GERENTE_GENERAL:
+        // Gerente general puede ver todo
+        if (action === Action.READ) return true;
+        
+        // Puede gestionar reportes y configuraciones
+        if ((resource === Resource.REPORTS || resource === Resource.SETTINGS) && 
+            (action === Action.CREATE || action === Action.UPDATE)) {
+          return true;
+        }
+        
+        // Puede gestionar analítica
+        if (resource === Resource.ANALYTICS) return true;
+        
+        return false;
+        
+      case UserRole.GERENTE_OFICINA:
+        // Gerente de oficina puede ver y gestionar datos de su oficina
+        if (resource === Resource.OFFICE) return true;
+        
+        // Para otros recursos, verificar contexto de oficina
+        if (context && context.officeId && officeId) {
+          if (context.officeId !== officeId) return false;
+          
+          // Dentro de su oficina puede leer, crear y actualizar
+          if (action === Action.READ || action === Action.CREATE || action === Action.UPDATE) {
+            return true;
+          }
+        }
+        
+        // Puede leer configuraciones generales
+        if (resource === Resource.SETTINGS && action === Action.READ) return true;
+        
+        return false;
+        
+      case UserRole.ANALISTA:
+        // Analista solo puede ver datos
+        if (action !== Action.READ) return false;
+        
+        // Si tiene oficina asignada, solo ve datos de esa oficina
+        if (officeId && context && context.officeId) {
+          return context.officeId === officeId;
+        }
+        
+        // Puede leer reportes y configuraciones generales
+        return resource === Resource.REPORTS || resource === Resource.SETTINGS;
+        
+      case UserRole.EDITOR:
+        // Editor puede leer y escribir reportes
+        if (resource === Resource.REPORTS) {
+          return action === Action.READ || action === Action.CREATE || action === Action.UPDATE;
+        }
+        
+        // Puede leer usuarios y configuraciones
+        if ((resource === Resource.USERS || resource === Resource.SETTINGS) && action === Action.READ) {
+          return true;
+        }
+        
+        return false;
+        
+      case UserRole.USER:
+      default:
+        // Usuario básico solo puede leer reportes y configuraciones
+        return (resource === Resource.REPORTS || resource === Resource.SETTINGS) && action === Action.READ;
+    }
+  };
+
+  /**
+   * Verifica si un usuario puede realizar una acción específica sobre un dato financiero
+   */
+  const canAccessFinancialData = (action: Action, data: any): boolean => {
+    if (!user) return false;
+    
+    // Verificar si el dato tiene información de oficina
+    const officeId = data.dimensiones?.oficina;
+    
+    return can(action, Resource.FINANCIAL_DATA, { officeId });
+  };
+
+  /**
+   * Filtra una lista de datos según los permisos del usuario
+   */
+  const filterAllowedData = <T extends Record<string, any>>(data: T[]): T[] => {
+    if (!user) return [];
+    
+    return data.filter(item => canAccessFinancialData(Action.READ, item));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -204,6 +409,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         sendEmailVerification,
         verifyEmail,
         isEmailVerified,
+        can,
+        canAccessFinancialData,
+        filterAllowedData
       }}
     >
       {children}
@@ -223,4 +431,16 @@ export const useAuth = (): AuthContextType => {
 export const useAuthToken = (): string | null => {
   const { token } = useAuth();
   return token;
+};
+
+// Hook para verificar si un usuario puede realizar una acción específica
+export const usePermission = () => {
+  const { can } = useAuth();
+  return can;
+};
+
+// Hook para verificar acceso a datos financieros
+export const useFinancialDataAccess = () => {
+  const { canAccessFinancialData, filterAllowedData } = useAuth();
+  return { canAccessFinancialData, filterAllowedData };
 };

@@ -15,14 +15,23 @@ export class AuthController {
    */
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, displayName, role = UserRole.USER } = req.body;
+      const { email, password, displayName, role = UserRole.USER, officeId } = req.body;
 
       if (!email || !password || !displayName) {
         res.status(400).json({ message: 'Datos incompletos. Se requiere email, password y displayName' });
         return;
       }
 
-      const result = await this.authService.createUser(email, password, displayName, role);
+      // Validar que se proporcione officeId cuando el rol es GERENTE_OFICINA o ANALISTA
+      if ((role === UserRole.GERENTE_OFICINA || role === UserRole.ANALISTA) && !officeId) {
+        res.status(400).json({ 
+          message: 'Se requiere ID de oficina para usuarios con rol de gerente o analista',
+          code: 'auth/missing-office-id'
+        });
+        return;
+      }
+
+      const result = await this.authService.createUser(email, password, displayName, role, officeId);
       
       // Enviar correo de verificación automáticamente
       try {
@@ -280,14 +289,23 @@ export class AuthController {
         return;
       }
 
-      const { userId, newRole } = req.body;
+      const { userId, newRole, officeId } = req.body;
       
       if (!userId || !newRole) {
         res.status(400).json({ message: 'Se requiere userId y newRole' });
         return;
       }
 
-      const updatedUser = await this.authService.updateUserRole(userId, newRole);
+      // Validar que se proporcione officeId cuando el rol es GERENTE_OFICINA o ANALISTA
+      if ((newRole === UserRole.GERENTE_OFICINA || newRole === UserRole.ANALISTA) && !officeId) {
+        res.status(400).json({ 
+          message: 'Se requiere ID de oficina para usuarios con rol de gerente o analista',
+          code: 'auth/missing-office-id'
+        });
+        return;
+      }
+
+      const updatedUser = await this.authService.updateUserRole(userId, newRole, officeId);
       res.status(200).json(updatedUser);
     } catch (error: any) {
       console.error('Error al actualizar rol de usuario:', error);

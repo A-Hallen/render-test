@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { asistenteIAService, RespuestaIA } from '../../services/AsistenteIAService';
 import Visualizacion from '../../features/visualizacion/componentes/Visualizacion';
-import { useAutorizacion } from '../../context/AutorizacionContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface MensajeChat {
   id: string;
@@ -28,13 +28,13 @@ const AsistenteIA: React.FC<AsistenteIAProps> = ({ className = '' }) => {
   const [cargando, setCargando] = useState<boolean>(false);
   const [escuchando, setEscuchando] = useState<boolean>(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const { usuario } = useAutorizacion();
+  const { user } = useAuth();
   
   // Mensaje de bienvenida
   useEffect(() => {
     const mensajeBienvenida: MensajeChat = {
       id: 'bienvenida',
-      texto: `¡Hola${usuario ? `, ${usuario.nombre}` : ''}! Soy tu asistente financiero. ¿En qué puedo ayudarte hoy?`,
+      texto: `¡Hola${user ? `, ${user.displayName}` : ''}! Soy tu asistente financiero. ¿En qué puedo ayudarte hoy?`,
       esUsuario: false,
       sugerencias: [
         'Muéstrame un gráfico de barras 3D de ingresos por oficina',
@@ -45,7 +45,7 @@ const AsistenteIA: React.FC<AsistenteIAProps> = ({ className = '' }) => {
     };
     
     setMensajes([mensajeBienvenida]);
-  }, [usuario]);
+  }, [user]);
   
   // Desplazar al último mensaje
   useEffect(() => {
@@ -74,7 +74,7 @@ const AsistenteIA: React.FC<AsistenteIAProps> = ({ className = '' }) => {
       // Procesar consulta con el asistente
       const respuesta = await asistenteIAService.procesarConsulta({
         texto: consulta,
-        usuario: usuario?.id,
+        usuario: user?.uid,
         fecha: new Date()
       });
       

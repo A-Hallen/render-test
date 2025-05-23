@@ -3,10 +3,11 @@ import { ChartCard } from '../components/dashboard/ChartCard';
 import { KpiCard } from '../components/dashboard/KpiCard';
 import { TrendingUp, Users, Building2 } from 'lucide-react';
 import { DatoFinanciero } from '../features/visualizacion/modelo/DatoFinanciero';
-import { useAutorizacion } from '../context/AutorizacionContext';
 import Visualizacion from '../features/visualizacion/componentes/Visualizacion';
 import { TipoVisualizacion } from '../features/visualizacion/modelo/DatoFinanciero';
 import { FirebaseService } from '../services/FirebaseService';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types/auth';
 
 export const Analysis: React.FC = () => {
   const [selectedOffice, setSelectedOffice] = useState('all');
@@ -18,17 +19,16 @@ export const Analysis: React.FC = () => {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Obtenemos el usuario actual para aplicar filtros según su rol
-  const { usuario } = useAutorizacion();
+  //const { usuario } = useAutorizacion();
+  const { user } = useAuth();
+  
   
   // Aplicar filtros adicionales según el rol del usuario
   useEffect(() => {
-    if (usuario) {
-      // Si el usuario es gerente de oficina, pre-seleccionar su oficina
-      if (usuario.rol === 'gerente_oficina' && usuario.oficinaId) {
-        setSelectedOffice(usuario.oficinaId);
-      }
+    if(user?.role == UserRole.GERENTE_OFICINA && user?.officeId){
+      setSelectedOffice(user?.officeId);
     }
-  }, [usuario]);
+  }, [user]);
 
   // Cargar datos cuando cambien los filtros
   useEffect(() => {

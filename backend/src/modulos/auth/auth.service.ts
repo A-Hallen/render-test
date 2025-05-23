@@ -12,9 +12,14 @@ export class AuthService {
   /**
    * Crea un nuevo usuario
    */
-  async createUser(email: string, password: string, displayName: string, role: UserRole = UserRole.USER): Promise<User> {
+  async createUser(email: string, password: string, displayName: string, role: UserRole = UserRole.USER, officeId?: string): Promise<User> {
     try {
-      return await this.authRepository.createUser(email, password, displayName, role);
+      // Validar que se proporcione officeId cuando el rol es GERENTE_OFICINA o ANALISTA
+      if ((role === UserRole.GERENTE_OFICINA || role === UserRole.ANALISTA) && !officeId) {
+        throw { code: 'auth/missing-office-id', message: 'Se requiere ID de oficina para usuarios con rol de gerente o analista' };
+      }
+      
+      return await this.authRepository.createUser(email, password, displayName, role, officeId);
     } catch (error) {
       console.error('Error en servicio al crear usuario:', error);
       throw error;
@@ -111,9 +116,19 @@ export class AuthService {
   /**
    * Actualiza el rol de un usuario
    */
-  async updateUserRole(uid: string, role: UserRole): Promise<User | null> {
+  async updateUserRole(uid: string, role: UserRole, officeId?: string): Promise<User | null> {
     try {
-      return await this.authRepository.updateUserRole(uid, role);
+      // Validar que se proporcione officeId cuando el rol es GERENTE_OFICINA o ANALISTA
+      if ((role === UserRole.GERENTE_OFICINA || role === UserRole.ANALISTA) && !officeId) {
+        throw { code: 'auth/missing-office-id', message: 'Se requiere ID de oficina para usuarios con rol de gerente o analista' };
+      }
+      
+      // Si el rol es gerente o analista, actualizar también el officeId
+      if ((role === UserRole.GERENTE_OFICINA || role === UserRole.ANALISTA) && officeId) {
+        return await this.authRepository.updateUser(uid, { role, officeId });
+      } else {
+        return await this.authRepository.updateUserRole(uid, role);
+      }
     } catch (error) {
       console.error('Error en servicio al actualizar rol de usuario:', error);
       throw error;
