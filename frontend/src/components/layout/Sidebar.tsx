@@ -10,7 +10,11 @@ import {
   ChevronRight,
   TrendingUp,
   Database,
-  BarChart2
+  BarChart2,
+  Users,
+  CreditCard,
+  Banknote,
+  Box
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
@@ -23,6 +27,10 @@ export const Sidebar: React.FC = () => {
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: 'Análisis', icon: <TrendingUp size={20} />, path: '/analysis' },
     { name: 'Indicadores Contables', icon: <BarChart2 size={20} />, path: '/indicadores-contables' },
+    { name: 'Préstamos', icon: <CreditCard size={20} />, path: '/loans' },
+    { name: 'Miembros', icon: <Users size={20} />, path: '/members' },
+    { name: 'Depósitos', icon: <Banknote size={20} />, path: '/deposits' },
+    { name: 'Visualización 3D', icon: <Box size={20} />, path: '/visualizacion-3d' },
     { name: 'AI Asistente', icon: <MessageSquare size={20} />, path: '/ai-chat' },
     { name: 'Informes', icon: <FileText size={20} />, path: '/reports' },
     { name: 'Calendario', icon: <Calendar size={20} />, path: '/calendar' },

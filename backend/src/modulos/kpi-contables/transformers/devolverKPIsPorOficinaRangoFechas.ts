@@ -8,8 +8,8 @@ import { SaldosContables } from "../../saldosContables/saldos.model";
 interface IndicadorContableExtendido extends IndicadorContable {
   numerador: any;
   denominador: any;
-  numeradorAbsoluto?: boolean;
-  denominadorAbsoluto?: boolean;
+  numeradorAbsoluto: boolean;
+  denominadorAbsoluto: boolean;
 }
 
 // Definir la interfaz para el cálculo de KPI
@@ -148,9 +148,7 @@ export const devolverKPIsPorOficinaRangoFechas = async (
       const kpisCalculados: KPICalculado[] = [];
       indicadores.forEach((indicador) => {
           try {
-            // Convertir indicador a formato extendido
-            const indicadorExtendido = indicador as unknown as IndicadorContableExtendido;
-            const resultado: CalculoKPI = calcularKPIContable(indicadorExtendido, saldos as SaldosContables[]);
+            const resultado: CalculoKPI = calcularKPIContable(indicador, saldos);
             const kpiCalculado: KPICalculado = {
               fecha: fechaStr,
               idIndicador: indicador.id,

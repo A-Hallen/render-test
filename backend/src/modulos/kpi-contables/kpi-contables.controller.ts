@@ -42,21 +42,6 @@ export class KPIContablesController {
             let fechaInicio = req.query["fechaInicio"] as string;
             let fechaFin = req.query["fechaFin"] as string;
             
-            // Formatear fechas si es necesario (asegurar formato YYYY-MM-DD)
-            console.log(`[Controller] Fechas recibidas: inicio=${fechaInicio}, fin=${fechaFin}`);
-            
-            if (fechaInicio && fechaInicio.includes('/')) {
-                const [dia, mes, anio] = fechaInicio.split('/');
-                fechaInicio = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
-                console.log(`[Controller] Fecha inicio formateada: ${fechaInicio}`);
-            }
-            
-            if (fechaFin && fechaFin.includes('/')) {
-                const [dia, mes, anio] = fechaFin.split('/');
-                fechaFin = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
-                console.log(`[Controller] Fecha fin formateada: ${fechaFin}`);
-            }
-            
             console.log(`[Controller] Obteniendo KPIs para oficina: ${oficina}, desde: ${fechaInicio}, hasta: ${fechaFin}`);
             
             // Validar parámetros requeridos

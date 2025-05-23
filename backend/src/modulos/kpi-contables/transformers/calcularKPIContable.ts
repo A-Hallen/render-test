@@ -1,15 +1,7 @@
 import { SaldosContables } from "../../saldosContables/saldos.model";
 import { IndicadorContable } from "../../indicadores-contables/interfaces/IndicadorContable.interface";
 
-// Extender la interfaz IndicadorContable para incluir los campos necesarios para el cálculo
-interface IndicadorContableExtendido extends IndicadorContable {
-  numerador: Parte | string[];
-  denominador: Parte | string[];
-  numeradorAbsoluto?: boolean;
-  denominadorAbsoluto?: boolean;
-}
-
-export const calcularKPIContable = (indicador: IndicadorContableExtendido, saldos: SaldosContables[]) => {
+export const calcularKPIContable = (indicador: IndicadorContable, saldos: SaldosContables[]) => {
     try {
         console.log("entra a calcularKPIContable");
         // Calcular numerador
@@ -168,7 +160,7 @@ console.log("vaa al tercero");
             // Calcular valores individuales por cuenta
             componente.cuentas.forEach(codigo => {
                 saldos.forEach(saldo => {
-                    if (saldo.codigoCuentaContable === Number(codigo)) {
+                    if (saldo.codigoCuentaContable.toString() === codigo.toString()) {
                         let valor = aplicarValorAbsoluto ? Math.abs(saldo.saldo) : saldo.saldo;
                         valor = valor * componente.coeficiente;
                         valoresPorCuenta[saldo.codigoCuentaContable] = valor;
@@ -195,7 +187,7 @@ const _filtrarPorCodigos = (saldos: SaldosContables[], codigos: string[], aplica
         .filter(s => {
             // Verificar si alguno de los códigos coincide exactamente con el código de cuenta
             return codigos.some(codigo =>
-                s.codigoCuentaContable === Number(codigo)
+                s.codigoCuentaContable.toString() === codigo.toString()
             );
         })
         .reduce((sum, s) => {

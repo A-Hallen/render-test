@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ChartCard } from "../../components/dashboard/ChartCard";
 import { IndicadorCalcularPeriodoResponse } from "shared/src/types/indicadores.types";
-import { useCallback } from "react";
 
 export const IndicadoresChart = () => {
     const [data, setData] = useState<IndicadorCalcularPeriodoResponse | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
     const onFilterChange = useCallback(() => {
         const today = new Date();
@@ -23,10 +24,9 @@ export const IndicadoresChart = () => {
 
         const fechaInicioStr = formatDate(startDate);
         const fechaFinStr = formatDate(today);
-        console.log(fechaInicioStr, fechaFinStr);
 
         obtenerIndicadoresCalculados(fechaInicioStr, fechaFinStr);
-    }, [])
+    }, []);
 
     useEffect(() => {
         onFilterChange();
@@ -34,51 +34,123 @@ export const IndicadoresChart = () => {
 
     const obtenerIndicadoresCalculados = async (inicio: string, fin: string) => {
         try {
+            setIsLoading(true);
+            setError(null);
+            
             // Actualizado para usar la nueva ruta del módulo de KPI contables
             const response = await fetch(`/api/kpi-contables/rango-fechas?oficina=TABACUNDO&fechaInicio=${inicio}&fechaFin=${fin}`);
+            
+            if (!response.ok) {
+                throw new Error(`Error en la respuesta: ${response.status} ${response.statusText}`);
+            }
+            
             const result = await response.json();
-            console.log("result", result);
-            if(result.error){
+            
+            if (result.error) {
                 throw new Error(result.error);
             }
-            // Adaptamos la estructura de datos para que coincida con lo que espera el componente
-            setData({
-                indicadores: result.indicadores,
-                indicadoresCalculados: Object.entries(result.kpisCalculados).map(([fecha, valores]) => {
-                    // Aseguramos que valores sea un objeto para evitar errores de tipo
-                    const valoresObj = typeof valores === 'object' && valores !== null ? valores : {};
-                    return {
-                        month: fecha,
-                        ...valoresObj
-                    };
-                })
-            });
-        } catch (error) {
+            
+            if (!result.indicadores || !result.kpisCalculados) {
+                throw new Error('La respuesta no contiene los datos esperados');
+            }
+            
+            // Transformar los datos para el gráfico
+            const chartData = transformarDatosParaGrafico(result);
+            setData(chartData);
+        } catch (error: any) {
+            console.error("Error al obtener indicadores:", error);
+            setError(error.message || 'Error al cargar los datos');
             setData(null);
-            console.error("Error fetching data:", error);
+        } finally {
+            setIsLoading(false);
         }
-    }
+    };
+    
+    // Función para transformar los datos al formato esperado por el gráfico
+    const transformarDatosParaGrafico = (result: any): IndicadorCalcularPeriodoResponse => {
+        // Obtener los indicadores
+        const indicadores = result.indicadores || [];
+        
+        // Transformar los KPIs calculados en un formato adecuado para el gráfico
+        const indicadoresCalculados = Object.entries(result.kpisCalculados || {}).map(([fecha, kpisDelDia]: [string, any]) => {
+            // Crear un objeto base con la fecha
+            const datoDelDia: any = { month: fecha };
+            
+            // Si kpisDelDia es un array, procesarlo
+            if (Array.isArray(kpisDelDia)) {
+                // Agregar cada KPI al objeto usando el nombre del indicador como clave
+                kpisDelDia.forEach((kpi: any) => {
+                    // Buscar el indicador correspondiente para obtener su nombre
+                    const indicador = indicadores.find((ind: any) => ind.id === kpi.idIndicador);
+                    if (indicador) {
+                        // Usar el nombre del indicador como clave y el valor del KPI como valor
+                        datoDelDia[indicador.nombre] = kpi.valor;
+                    }
+                });
+            }
+            
+            return datoDelDia;
+        });
+        
+        return {
+            indicadores,
+            indicadoresCalculados
+        };
+    };
 
-    return (
-        <div className="grid grid-cols-1 gap-6">
-            {data === undefined ? (
-                <p className="text-center">Cargando...</p>
-            ) : data === null ? (
-                <p className="text-center text-red-600">Error al obtener los datos</p>
-            ) : (
+    // Renderizar diferentes estados
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            );
+        }
+        
+        if (error) {
+            return (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <p className="text-red-600 font-medium">Error</p>
+                    <p className="text-red-500">{error}</p>
+                    <button 
+                        onClick={() => onFilterChange()} 
+                        className="mt-3 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
+                    >
+                        Reintentar
+                    </button>
+                </div>
+            );
+        }
+        
+        if (!data || !data.indicadoresCalculados || data.indicadoresCalculados.length === 0) {
+            return (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                    <p className="text-yellow-700">No hay datos disponibles para el período seleccionado</p>
+                </div>
+            );
+        }
+        
+        return (
             <ChartCard
                 title="Indicadores Financieros"
                 subTitle="Evolución de indicadores clave (últimos 6 meses)"
                 type="line"
-                data={data?.indicadoresCalculados ? data.indicadoresCalculados : []}
+                data={data.indicadoresCalculados}
                 xDataKey="month"
-                series={data ? data.indicadores?.map(indicador => ({
-                    dataKey: indicador.nombre, // Convert 'id' to string for dataKey
+                series={data.indicadores.map(indicador => ({
+                    dataKey: indicador.nombre,
                     color: indicador.color,
                     name: indicador.nombre,
-                })) : []}
+                }))}
                 height={350}
-            />)}
+            />
+        );
+    };
+
+    return (
+        <div className="grid grid-cols-1 gap-6">
+            {renderContent()}
         </div>
     );
 }

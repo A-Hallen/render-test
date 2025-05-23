@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { IndicadoresRepository } from '../indicadores/indicadores.repository';
+import { IndicadoresContablesRepository } from '../indicadores-contables/indicadores-contables.repository';
 import { ReporteContabilidadRepository } from '../reportes/contabilidad/reporte-contabilidad.repository';
 import { OficinaService } from '../oficinas/oficinas.service';
 import { ConfiguracionReportesContabilidadService } from '../configuracion-reportes/contabilidad/configuracion-reportes-contabilidad.service';
@@ -15,7 +15,7 @@ export class IaService {
         this.configuracionReportesService = new ConfiguracionReportesContabilidadService();
     }
 
-    indicadoresRepository = new IndicadoresRepository();
+    indicadoresRepository = new IndicadoresContablesRepository();
     reporteContabilidadRepository = new ReporteContabilidadRepository();
 
     convertToBase64 = (buffer: Buffer<ArrayBufferLike>): Promise<string> => {

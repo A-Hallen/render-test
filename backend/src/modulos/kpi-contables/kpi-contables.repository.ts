@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { IndicadorContable } from "../indicadores-contables/interfaces/IndicadorContable.interface";
 import { devolverKPIsPorOficinaRangoFechas } from "./transformers/devolverKPIsPorOficinaRangoFechas";
+import { IndicadoresContablesRepository } from "../indicadores-contables/indicadores-contables.repository";
 
 // Definimos localmente la interfaz necesaria para evitar problemas de importación
 interface IndicadorColor {
@@ -10,20 +11,10 @@ interface IndicadorColor {
 }
 
 export class KPIContablesRepository {
-  private collection: admin.firestore.CollectionReference;
+  indicadoresRepository: IndicadoresContablesRepository;
 
   constructor() {
-    this.collection = admin.firestore().collection("Indicadores");
-  }
-
-  async obtenerTodos(): Promise<IndicadorContable[]> {
-    try {
-      const snapshot = await this.collection.get();
-      return snapshot.docs.map(doc => doc.data() as IndicadorContable);
-    } catch (error) {
-      console.error("Error al obtener todos los indicadores:", error);
-      return [];
-    }
+    this.indicadoresRepository = new IndicadoresContablesRepository();
   }
 
   async obtenerPromedioKPIsOficina(
@@ -31,7 +22,7 @@ export class KPIContablesRepository {
     fechaInicio: string,
     fechaFin: string
   ) {
-    const indicadores = await this.obtenerTodos();
+    const indicadores = await this.indicadoresRepository.obtenerTodos();
     const resultado = await devolverKPIsPorOficinaRangoFechas(
       indicadores,
       oficina,
@@ -69,7 +60,7 @@ export class KPIContablesRepository {
       console.log(`[KPIContablesRepository] Obteniendo KPIs para oficina: ${oficina}, desde: ${fechaInicio}, hasta: ${fechaFin}`);
       
       // Obtener todos los indicadores configurados
-      const indicadores = await this.obtenerTodos();
+      const indicadores = await this.indicadoresRepository.obtenerTodos();
       console.log(`[KPIContablesRepository] Se encontraron ${indicadores.length} indicadores configurados`);
       
       // Obtener los KPIs calculados
