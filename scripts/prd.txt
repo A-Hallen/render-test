@@ -1,0 +1,106 @@
+# Documento de Requisitos del Producto: Sistema de Visualización Financiera 3D con IA
+
+## Visión General
+Desarrollar un sistema de visualización financiera avanzado para instituciones financieras que permita mostrar información de diferentes áreas (contabilidad, captaciones, colocaciones, inversiones, atención al cliente) mediante gráficos 3D interactivos. El sistema incluirá un asistente de IA capaz de responder consultas por texto y voz, y generará visualizaciones personalizadas según los permisos del usuario.
+
+## Objetivos
+1. Proporcionar visualizaciones 3D de datos financieros para facilitar el análisis y la toma de decisiones
+2. Implementar un sistema de control de acceso basado en roles para mostrar información según permisos
+3. Integrar un asistente de IA que responda consultas y genere visualizaciones a demanda
+4. Extraer datos de un core financiero y almacenarlos en Firebase para su uso en la aplicación
+5. Ofrecer una experiencia de usuario intuitiva y moderna
+
+## Requisitos Funcionales
+
+### Visualización de Datos
+- Implementar una arquitectura genérica para visualización de diferentes tipos de datos financieros
+- Crear un modelo de datos unificado que estandarice diferentes fuentes de información
+- Desarrollar adaptadores para transformar datos específicos al modelo genérico
+- Implementar una fábrica de visualizaciones para crear diferentes tipos de gráficos 3D
+- Implementar gráficos 3D interactivos utilizando ECharts o bibliotecas similares
+- Permitir la rotación, zoom y exploración de gráficos 3D
+- Mostrar indicadores clave con semáforos de alerta (rojo, amarillo, verde)
+- Incluir gráficos de barras 3D, superficies 3D, dispersión 3D y otros tipos relevantes
+- Permitir la personalización de colores, iluminación y texturas en los gráficos
+
+### Control de Acceso Basado en Roles
+- Implementar roles como administrador, gerente general, gerente de oficina y analista
+- Filtrar la información mostrada según el rol y la oficina asignada al usuario
+- Permitir que administradores y gerentes generales vean información de todas las oficinas
+- Restringir a gerentes de oficina y analistas a ver solo la información de su oficina
+- Implementar permisos por módulo (contabilidad, captaciones, colocaciones, etc.)
+
+### Asistente de IA
+- Integrar un asistente capaz de responder consultas por texto y voz
+- Permitir solicitar visualizaciones específicas mediante lenguaje natural
+- Implementar reconocimiento de voz para consultas habladas
+- Proporcionar respuestas por texto y voz según preferencia del usuario
+- Analizar datos históricos para proporcionar insights y tendencias
+
+### Integración con Core Financiero y Firebase
+- Desarrollar servicios para extraer datos del core financiero
+- Implementar sincronización programada para mantener datos actualizados
+- Almacenar datos en Firebase con estructura optimizada para visualizaciones 3D
+- Implementar caché para mejorar el rendimiento de consultas frecuentes
+- Asegurar la integridad y seguridad de los datos
+
+### Interfaz de Usuario
+- Diseñar un dashboard principal con indicadores clave y gráficos 3D
+- Implementar filtros dinámicos por oficina, período y tipo de producto
+- Crear vistas específicas para cada área (contabilidad, captaciones, etc.)
+- Implementar en la sección de Análisis filtros para seleccionar el módulo del que se desean visualizar indicadores o datos
+- Permitir personalización de visualizaciones según los filtros seleccionados
+- Diseñar interfaz responsive para diferentes dispositivos
+- Implementar tema claro/oscuro y opciones de accesibilidad
+
+## Requisitos No Funcionales
+
+### Rendimiento
+- Los gráficos 3D deben cargarse en menos de 3 segundos
+- El sistema debe soportar al menos 100 usuarios concurrentes
+- Las respuestas del asistente de IA deben generarse en menos de 5 segundos
+- La sincronización con el core financiero no debe afectar el rendimiento
+
+### Seguridad
+- Implementar autenticación segura mediante Firebase Authentication
+- Configurar reglas de seguridad en Firebase para proteger datos sensibles
+- Cifrar datos en tránsito y en reposo
+- Registrar todas las acciones de usuarios para auditoría
+
+### Escalabilidad
+- Diseñar la arquitectura para soportar crecimiento en usuarios y datos
+- Permitir la adición de nuevos tipos de gráficos y visualizaciones
+- Facilitar la integración con otros sistemas y APIs
+
+### Usabilidad
+- La interfaz debe ser intuitiva y requerir mínima capacitación
+- Proporcionar ayuda contextual y tutoriales integrados
+- Asegurar que los gráficos 3D sean comprensibles y útiles
+
+## Tecnologías
+- Frontend: React, TypeScript, ECharts para visualizaciones 3D
+- Backend: Node.js, Express
+- Base de datos: Firebase Firestore
+- Autenticación: Firebase Authentication
+- IA: Google Gemini para procesamiento de lenguaje natural y generación de respuestas
+
+## Entregables
+1. Aplicación web completa con visualizaciones 3D
+2. Documentación técnica y de usuario
+3. Código fuente comentado y estructurado
+4. Scripts de sincronización con el core financiero
+5. Pruebas unitarias y de integración
+
+## Cronograma
+- Fase 1: Diseño de arquitectura y configuración inicial (2 semanas)
+- Fase 2: Implementación de visualizaciones 3D y control de acceso (4 semanas)
+- Fase 3: Integración con core financiero y Firebase (3 semanas)
+- Fase 4: Desarrollo del asistente de IA (3 semanas)
+- Fase 5: Pruebas, optimización y despliegue (2 semanas)
+
+## Criterios de Aceptación
+1. El sistema muestra correctamente visualizaciones 3D de datos financieros
+2. La información se filtra adecuadamente según el rol y oficina del usuario
+3. El asistente de IA responde correctamente a consultas por texto y voz
+4. Los datos se sincronizan correctamente desde el core financiero
+5. El sistema cumple con los requisitos de rendimiento y seguridad

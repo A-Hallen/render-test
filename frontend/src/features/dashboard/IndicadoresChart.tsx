@@ -34,13 +34,25 @@ export const IndicadoresChart = () => {
 
     const obtenerIndicadoresCalculados = async (inicio: string, fin: string) => {
         try {
-            const response = await fetch(`/api/indicadores/calcular-periodo/?oficina=TABACUNDO&fechaInicio=${inicio}&fechaFin=${fin}`);
+            // Actualizado para usar la nueva ruta del módulo de KPI contables
+            const response = await fetch(`/api/kpi-contables/rango-fechas?oficina=TABACUNDO&fechaInicio=${inicio}&fechaFin=${fin}`);
             const result = await response.json();
             console.log("result", result);
             if(result.error){
                 throw new Error(result.error);
             }
-            setData(result);
+            // Adaptamos la estructura de datos para que coincida con lo que espera el componente
+            setData({
+                indicadores: result.indicadores,
+                indicadoresCalculados: Object.entries(result.kpisCalculados).map(([fecha, valores]) => {
+                    // Aseguramos que valores sea un objeto para evitar errores de tipo
+                    const valoresObj = typeof valores === 'object' && valores !== null ? valores : {};
+                    return {
+                        month: fecha,
+                        ...valoresObj
+                    };
+                })
+            });
         } catch (error) {
             setData(null);
             console.error("Error fetching data:", error);

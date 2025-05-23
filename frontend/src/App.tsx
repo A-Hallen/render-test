@@ -3,11 +3,15 @@ import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Analysis } from './pages/Analysis';
 import { AIChat } from './pages/AIChat';
+import { AsistenteIAPage } from './pages/AsistenteIA';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { Loans } from './pages/Loans';
 import { Members } from './pages/Members';
 import { Deposits } from './pages/Deposits';
+import { Visualizacion3D } from './pages/Visualizacion3D';
+import { Sincronizacion } from './pages/Sincronizacion';
+import { IndicadoresContables } from './pages/IndicadoresContables';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { DataProvider } from './context/DataContext';
@@ -34,6 +38,10 @@ function App() {
                   <Route path="/loans" element={<Loans />} />
                   <Route path="/members" element={<Members />} />
                   <Route path="/deposits" element={<Deposits />} />
+                  <Route path="/visualizacion-3d" element={<Visualizacion3D />} />
+                  <Route path="/asistente-ia" element={<AsistenteIAPage />} />
+                  <Route path="/sincronizacion" element={<Sincronizacion />} />
+                  <Route path="/indicadores-contables" element={<IndicadoresContables />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
               </Routes>

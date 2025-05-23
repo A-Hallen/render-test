@@ -1,12 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChartCard } from '../components/dashboard/ChartCard';
 import { KpiCard } from '../components/dashboard/KpiCard';
-import { TrendingUp, Users, Building2, CreditCard, Wallet, PiggyBank } from 'lucide-react';
+import { TrendingUp, Users, Building2 } from 'lucide-react';
+import { DatoFinanciero } from '../features/visualizacion/modelo/DatoFinanciero';
+import { useAutorizacion } from '../context/AutorizacionContext';
+import Visualizacion from '../features/visualizacion/componentes/Visualizacion';
+import { TipoVisualizacion } from '../features/visualizacion/modelo/DatoFinanciero';
+import { FirebaseService } from '../services/FirebaseService';
 
 export const Analysis: React.FC = () => {
   const [selectedOffice, setSelectedOffice] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState('all');
   const [timeRange, setTimeRange] = useState('6m');
+  const [selectedModule, setSelectedModule] = useState('all');
+  const [selectedVisualization, setSelectedVisualization] = useState('barras3d');
+  const [datos, setDatos] = useState<DatoFinanciero[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Obtenemos el usuario actual para aplicar filtros según su rol
+  const { usuario } = useAutorizacion();
+  
+  // Aplicar filtros adicionales según el rol del usuario
+  useEffect(() => {
+    if (usuario) {
+      // Si el usuario es gerente de oficina, pre-seleccionar su oficina
+      if (usuario.rol === 'gerente_oficina' && usuario.oficinaId) {
+        setSelectedOffice(usuario.oficinaId);
+      }
+    }
+  }, [usuario]);
+
+  // Cargar datos cuando cambien los filtros
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        setCargando(true);
+        setError(null);
+        
+        // Obtener datos filtrados desde Firebase
+        const firebaseService = new FirebaseService();
+        const datosFiltrados = await firebaseService.obtenerIndicadoresFinancieros({
+          modulo: selectedModule !== 'all' ? selectedModule : undefined,
+          oficina: selectedOffice !== 'all' ? selectedOffice : undefined,
+          producto: selectedProduct !== 'all' ? selectedProduct : undefined,
+          periodo: timeRange
+        });
+        
+        setDatos(datosFiltrados);
+      } catch (err) {
+        console.error('Error al cargar datos:', err);
+        setError('Error al cargar los datos. Por favor intente nuevamente.');
+      } finally {
+        setCargando(false);
+      }
+    };
+    
+    cargarDatos();
+  }, [selectedModule, selectedOffice, selectedProduct, timeRange]);
+
+  // Convertir el tipo de visualización seleccionado al formato requerido por el componente
+  const obtenerTipoVisualizacion = (): TipoVisualizacion => {
+    switch (selectedVisualization) {
+      case 'barras3d': return TipoVisualizacion.BARRAS_3D;
+      case 'superficie3d': return TipoVisualizacion.SUPERFICIE_3D;
+      case 'dispersion3d': return TipoVisualizacion.DISPERSION_3D;
+      case 'lineaTiempo3d': return TipoVisualizacion.LINEA_TIEMPO_3D;
+      case 'mapaCalor3d': return TipoVisualizacion.MAPA_CALOR_3D;
+      default: return TipoVisualizacion.BARRAS_3D;
+    }
+  };
 
   // Datos de ejemplo para las gráficas
   const officeGrowthData = [
@@ -55,6 +117,19 @@ export const Analysis: React.FC = () => {
 
         <div className="flex flex-wrap gap-3">
           <select
+            value={selectedModule}
+            onChange={(e) => setSelectedModule(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Todos los módulos</option>
+            <option value="captaciones">Captaciones</option>
+            <option value="colocaciones">Colocaciones</option>
+            <option value="inversiones">Inversiones</option>
+            <option value="atencion">Atención al Cliente</option>
+            <option value="contabilidad">Contabilidad</option>
+          </select>
+
+          <select
             value={selectedOffice}
             onChange={(e) => setSelectedOffice(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -88,6 +163,29 @@ export const Analysis: React.FC = () => {
             <option value="6m">Últimos 6 meses</option>
             <option value="1y">Último año</option>
           </select>
+
+          <select
+            value={selectedVisualization}
+            onChange={(e) => setSelectedVisualization(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="barras3d">Gráfico de Barras 3D</option>
+            <option value="superficie3d">Gráfico de Superficie 3D</option>
+            <option value="dispersion3d">Gráfico de Dispersión 3D</option>
+            <option value="lineaTiempo3d">Línea Temporal 3D</option>
+            <option value="mapaCalor3d">Mapa de Calor 3D</option>
+          </select>
+          
+          <button 
+            onClick={() => {
+              // Recargar datos manualmente
+              setCargando(true);
+              setTimeout(() => setCargando(false), 1000); // Simulación de carga
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Actualizar
+          </button>
         </div>
       </div>
 
@@ -100,7 +198,6 @@ export const Analysis: React.FC = () => {
           color="blue"
           description="Crecimiento anual consolidado"
         />
-        
         <KpiCard
           title="Nuevos Socios"
           value="230"
@@ -109,7 +206,6 @@ export const Analysis: React.FC = () => {
           color="green"
           description="Socios nuevos en el último mes"
         />
-        
         <KpiCard
           title="Oficina más Activa"
           value="Matriz"
@@ -175,6 +271,43 @@ export const Analysis: React.FC = () => {
             { dataKey: 'plazo', color: '#F59E0B', name: 'Plazo Fijo' },
           ]}
         />
+      </div>
+
+      {/* Visualización 3D personalizada según filtros */}
+      <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-semibold mb-4">Visualización 3D Personalizada</h2>
+        <p className="text-gray-600 mb-6">Visualización generada según los filtros seleccionados</p>
+
+        {cargando ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <p>{error}</p>
+          </div>
+        ) : (
+          <div className="h-96">
+            <Visualizacion 
+              datos={datos} 
+              configuracion={{
+                tipo: obtenerTipoVisualizacion(),
+                dimensionX: 'oficina',
+                dimensionY: 'modulo',
+                metrica: 'valor',
+                filtros: {
+                  modulo: selectedModule !== 'all' ? selectedModule : undefined,
+                  oficina: selectedOffice !== 'all' ? selectedOffice : undefined,
+                  producto: selectedProduct !== 'all' ? selectedProduct : undefined,
+                  periodo: timeRange
+                }
+              }}
+              altura={400}
+              tema="claro"
+              cargando={cargando}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

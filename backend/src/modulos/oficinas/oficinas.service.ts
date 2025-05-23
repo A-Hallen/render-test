@@ -1,4 +1,3 @@
-import { Oficina } from './oficinas.model';
 import { OficinasRepository } from './oficinas.repository';
 import {ObtenerOficinasResponse} from 'shared/src/types/oficinas.types'
 

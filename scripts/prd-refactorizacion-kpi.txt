@@ -1,0 +1,99 @@
+# Documento de Requerimientos para la Refactorización de Módulos de Indicadores Contables y KPIs
+
+## Resumen Ejecutivo
+Este documento detalla los requerimientos para refactorizar la estructura actual del módulo de indicadores contables, separando claramente la gestión de indicadores contables (definiciones) de los KPIs contables (cálculos) en módulos independientes.
+
+## Situación Actual
+Actualmente, el sistema tiene una estructura donde los indicadores contables y KPIs están mezclados en un mismo módulo llamado "indicadores", que en realidad debería llamarse "indicadores-contables". Esto genera confusión y dificulta el mantenimiento del código. Los transformadores que realizan cálculos de KPIs están ubicados junto con la gestión de indicadores contables, lo que no refleja correctamente la separación de responsabilidades.
+
+## Objetivos de la Refactorización
+1. Separar claramente la gestión de indicadores contables (CRUD) de los cálculos de KPIs contables
+2. Crear una estructura de carpetas que refleje esta separación
+3. Renombrar componentes para mantener consistencia en la nomenclatura
+4. Asegurar que todas las rutas y referencias se actualicen correctamente
+5. Mantener la funcionalidad existente sin introducir regresiones
+
+## Nueva Estructura Propuesta
+
+### Módulo de Indicadores Contables
+- Responsabilidad: CRUD de indicadores contables (definiciones)
+- Ubicación: `/modulos/indicadores-contables`
+- Componentes:
+  - indicadores-contables.controller.ts
+  - indicadores-contables.service.ts
+  - indicadores-contables.repository.ts
+  - indicadores-contables.model.ts
+  - indicadores-contables.routes.ts
+  - interfaces/
+    - IndicadorContable.interface.ts
+
+### Módulo de KPIs Contables
+- Responsabilidad: Cálculos y procesamiento de KPIs contables
+- Ubicación: `/modulos/kpi-contables`
+- Componentes:
+  - kpi-contables.controller.ts
+  - kpi-contables.service.ts
+  - kpi-contables.repository.ts (si es necesario)
+  - kpi-contables.model.ts (si es necesario)
+  - kpi-contables.routes.ts
+  - interfaces/
+    - KPICalculado.interface.ts
+  - transformers/ (carpeta con todos los transformadores relacionados con KPIs)
+    - calcularKPIContable.ts
+    - devolverKPIsPorOficinaRangoFechas.ts
+    - obtenerSaldosContables.ts
+    - promediarKPIsPorFecha.ts
+
+## Tareas de Refactorización
+
+1. **Creación de la estructura de carpetas**
+   - Crear carpeta `/modulos/kpi-contables`
+   - Renombrar la carpeta actual `/modulos/indicadores` a `/modulos/indicadores-contables`
+
+2. **Movimiento y renombrado de archivos**
+   - Mover transformadores relacionados con KPIs a la nueva carpeta `/modulos/kpi-contables/transformers`
+   - Renombrar los transformadores para usar "KPI" en lugar de "indicadores" (ejemplo: `calcularIndicador.ts` → `calcularKPIContable.ts`)
+   - Renombrar los métodos internos en los transformadores para usar "KPI" en lugar de "indicadores"
+   - Crear nuevos controladores, servicios y rutas para KPIs contables
+   - Renombrar todos los archivos actuales de `indicadores.*` a `indicadores-contables.*`
+   - Actualizar todas las referencias internas en los archivos
+
+3. **Actualización de referencias**
+   - Actualizar importaciones en todos los archivos afectados
+   - Asegurar que las rutas API se mantengan consistentes o se actualicen según sea necesario
+
+4. **Actualización de rutas API**
+   - `/api/indicadores-contables` - Para CRUD de indicadores contables
+   - `/api/kpi-contables` - Para operaciones de KPIs contables
+
+5. **Pruebas**
+   - Verificar que todas las funcionalidades existentes sigan funcionando
+   - Probar específicamente las rutas de KPIs y de indicadores
+
+## Consideraciones Técnicas
+- Mantener la compatibilidad con el código existente
+- Asegurar que los nombres de métodos reflejen claramente su propósito
+- Documentar adecuadamente las interfaces y métodos públicos
+- Implementar logs adecuados para facilitar la depuración
+
+## Criterios de Aceptación
+1. Todas las funcionalidades existentes deben seguir funcionando correctamente
+2. La estructura de carpetas debe reflejar claramente la separación de responsabilidades
+3. Los nombres de componentes deben ser consistentes y descriptivos
+4. El código debe estar bien documentado
+5. Las pruebas deben pasar sin errores
+
+## Plan de Implementación
+1. Análisis detallado de la estructura actual
+2. Creación de la nueva estructura de carpetas
+3. Movimiento y adaptación de archivos
+4. Actualización de referencias
+5. Pruebas de integración
+6. Despliegue
+
+## Riesgos y Mitigación
+- **Riesgo**: Ruptura de funcionalidades existentes
+  - **Mitigación**: Implementar cambios incrementales y probar después de cada paso
+
+- **Riesgo**: Confusión en la nueva estructura
+  - **Mitigación**: Documentar claramente la nueva arquitectura y propósito de cada componente

@@ -1,27 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Plus } from "lucide-react";
 import { IndicadorResponse } from "shared/src/types/indicadores.types";
 import { IndicadoresList } from "../../features/indicadores/indicadoresList";
 import Modal, { ModalHandle } from "../../features/indicadores/formulaView";
-import { useRef } from "react";
 import { IndicadorEditor } from "../../features/indicadores/IndicadorEditor";
 import DeleteIndicadorDialog, {
   DeleteIndicadorDialogHandle,
 } from "../../features/indicadores/DeleteIndicadorDialog";
-
-interface Formula {
-  id: string;
-  name: string;
-  description: string;
-  formula: string;
-  variables: string[];
-  category: string;
-  threshold: {
-    warning: number;
-    critical: number;
-    unit: string;
-  };
-}
 
 export const KpiFormulaEditor: React.FC = () => {
   const [indicadores, setIndicadores] = useState<IndicadorResponse[]>([]);
@@ -38,7 +23,7 @@ export const KpiFormulaEditor: React.FC = () => {
 
   useEffect(() => {
     try {
-      fetch(`/api/indicadores`).then((response) =>
+      fetch(`/api/indicadores-contables`).then((response) =>
         response.json().then((data) => {
           if(data.error){
             throw new Error(data.error);
@@ -56,53 +41,16 @@ export const KpiFormulaEditor: React.FC = () => {
     modalRef.current?.openModal();
   };
 
-  const [formulas, setFormulas] = useState<Formula[]>([
-    {
-      id: "1",
-      name: "Índice de Morosidad",
-      description: "Porcentaje de cartera vencida sobre cartera total",
-      formula: "(cartera_vencida / cartera_total) * 100",
-      variables: ["cartera_vencida", "cartera_total"],
-      category: "Cartera",
-      threshold: {
-        warning: 3,
-        critical: 5,
-        unit: "%",
-      },
-    },
-    {
-      id: "2",
-      name: "Crecimiento Mensual",
-      description: "Variación porcentual del saldo respecto al mes anterior",
-      formula: "((saldo_actual - saldo_anterior) / saldo_anterior) * 100",
-      variables: ["saldo_actual", "saldo_anterior"],
-      category: "Captaciones",
-      threshold: {
-        warning: 1,
-        critical: 0,
-        unit: "%",
-      },
-    },
-  ]);
-
-  const categories = [
-    "Cartera",
-    "Captaciones",
-    "Socios",
-    "Liquidez",
-    "Rentabilidad",
-    "Eficiencia",
-  ];
 
   const handleDelete = async (indicador?: IndicadorResponse | null) => {
     setIndicadorSeleccionado(null);
     if (!indicador) return;
     deleteDialogRef.current?.close();
-    await fetch(`/api/indicadores/${indicador.id}`, {
+    await fetch(`/api/indicadores-contables/${indicador.id}`, {
       method: "DELETE",
     }).then(() => {
       try {
-        fetch(`/api/indicadores`).then((response) =>
+        fetch(`/api/indicadores-contables`).then((response) =>
           response.json().then((data) => {
             console.log(data);
             setIndicadores(data);
@@ -119,8 +67,8 @@ export const KpiFormulaEditor: React.FC = () => {
       indicadores.map((i) => (i.id === indicador.id ? indicador : i))
     );
     const url = editIndicador
-      ? `/api/indicadores/${editIndicador.id}`
-      : "/api/indicadores";
+      ? `/api/indicadores-contables/${editIndicador.id}`
+      : "/api/indicadores-contables";
     const method = editIndicador ? "PUT" : "POST";
     await fetch(url, {
       method: method,
@@ -130,7 +78,7 @@ export const KpiFormulaEditor: React.FC = () => {
       body: JSON.stringify(indicador),
     }).then(() => {
       try {
-        fetch(`/api/indicadores`).then((response) =>
+        fetch(`/api/indicadores-contables`).then((response) =>
           response.json().then((data) => {
             console.log(data);
             setIndicadores(data);
