@@ -97,7 +97,7 @@ export class ReportesRepository extends BaseRepository<ConfiguracionReporte> {
     // Obtener los saldos para todas las fechas
     const saldos = await this.saldosRepository.obtenerSaldosPorOficinaYFecha(
       reporteData.oficina,
-      fechas // Ya tenemos las fechas en formato YYYY-MM-DD
+      fechas.map((fecha) => new Date(fecha)) // Ya tenemos las fechas en formato YYYY-MM-DD
     );
 
     if (!saldos || saldos.length === 0)

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Paperclip, Bot, User, Loader2, Info, ChevronDown } from 'lucide-react';
 import { InputAudio } from './InputAudio';
 import ReactMarkdown from "react-markdown";
 
@@ -189,50 +189,76 @@ export const ChatInterface: React.FC = () => {
     }
   };
 
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200 bg-blue-50">
-        <h2 className="text-lg font-semibold text-blue-900 flex items-center">
-          <Bot className="mr-2" size={20} />
-          Asistente Financiero IA
-        </h2>
-        <p className="text-sm text-blue-700">
-          Consulta información, genera reportes o analiza indicadores financieros
-        </p>
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-lg border border-blue-100 overflow-hidden">
+      <div className="p-4 border-b border-blue-100 bg-blue-600 text-white">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold flex items-center">
+            <Bot className="mr-2" size={22} />
+            Asistente Financiero IA
+          </h2>
+          <button 
+            onClick={() => setShowInfo(!showInfo)}
+            className="p-1.5 rounded-full hover:bg-blue-500 transition-colors"
+          >
+            <Info size={18} />
+          </button>
+        </div>
+        
+        {showInfo && (
+          <div className="mt-3 p-3 bg-blue-500 rounded-lg text-sm overflow-hidden transition-all duration-300 ease-in-out">
+            <p className="mb-2">
+              Este asistente te permite:
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Consultar información financiera de la cooperativa</li>
+              <li>Generar reportes personalizados</li>
+              <li>Analizar indicadores y tendencias</li>
+              <li>Obtener recomendaciones basadas en datos</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300 ease-in-out`}
           >
             <div
-              className={`flex max-w-[80%] rounded-lg p-3 ${message.sender === 'user'
-                ? 'bg-blue-600 text-white rounded-br-none'
-                : 'bg-gray-100 text-gray-800 rounded-bl-none'
+              className={`flex max-w-[80%] shadow-sm ${message.sender === 'user'
+                ? 'bg-blue-600 text-white rounded-2xl rounded-br-none'
+                : 'bg-white border border-blue-100 text-gray-800 rounded-2xl rounded-bl-none'
                 }`}
             >
-              <div className="flex-shrink-0 mr-2 mt-0.5">
+              <div className={`flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full mt-2 ml-2 mr-1 ${message.sender === 'user' ? 'bg-blue-500' : 'bg-blue-100'}`}>
                 {message.sender === 'user' ? (
-                  <User size={18} className="text-blue-200" />
+                  <User size={16} className="text-white" />
                 ) : (
-                  <Bot size={18} className="text-blue-600" />
+                  <Bot size={16} className="text-blue-600" />
                 )}
               </div>
-              <div>
-                <p className="text-sm whitespace-pre-wrap">
+              <div className="p-3">
+                <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none">
                   <ReactMarkdown>{message.text}</ReactMarkdown>
-                </p>
+                </div>
                 {
                   message.audio ? (
-                    <audio controls className="mt-1">
-                      <source src={URL.createObjectURL(message.audio)} type="audio/wav" />
-                      Tu navegador no soporta el elemento de audio.
-                    </audio>
-                  ) : <p className="text-xs mt-1 opacity-70">
+                    <div className="mt-2 p-1 bg-blue-50 rounded-lg">
+                      <audio controls className="w-full h-8">
+                        <source src={URL.createObjectURL(message.audio)} type="audio/wav" />
+                        Tu navegador no soporta el elemento de audio.
+                      </audio>
+                    </div>
+                  ) : <p className={`text-xs mt-1 ${message.sender === 'user' ? 'text-blue-200' : 'text-gray-400'}`}>
                     {message.state === 'sending' ? (
-                      <span className="text-gray-500">Enviando...</span>
+                      <span className="flex items-center">
+                        <Loader2 size={10} className="animate-spin mr-1" />
+                        Enviando...
+                      </span>
                     ) : (
                       <>{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</>
                     )}
@@ -245,10 +271,19 @@ export const ChatInterface: React.FC = () => {
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 text-gray-800 rounded-lg rounded-bl-none p-3">
+            <div className="bg-white border border-blue-100 text-gray-800 rounded-2xl rounded-bl-none shadow-sm p-3">
               <div className="flex items-center">
-                <Loader2 size={18} className="text-blue-600 animate-spin mr-2" />
-                <span className="text-sm">El asistente está escribiendo...</span>
+                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 mr-2">
+                  <Bot size={16} className="text-blue-600" />
+                </div>
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-600">El asistente está escribiendo</span>
+                  <span className="ml-1 flex space-x-1">
+                    <span className="h-1 w-1 bg-blue-600 rounded-full animate-pulse" style={{animationDelay: '0s'}} />
+                    <span className="h-1 w-1 bg-blue-600 rounded-full animate-pulse" style={{animationDelay: '0.2s'}} />
+                    <span className="h-1 w-1 bg-blue-600 rounded-full animate-pulse" style={{animationDelay: '0.4s'}} />
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -257,19 +292,19 @@ export const ChatInterface: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 border-t border-gray-200">
+      <div className="p-4 border-t border-blue-100 bg-white">
         <div className="flex items-end space-x-2">
-          <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full">
+          <button className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors">
             <Paperclip size={20} />
           </button>
 
-          <div className="flex-1 rounded-lg border border-gray-300 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+          <div className="flex-1 rounded-xl border border-blue-200 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all shadow-sm hover:shadow">
             <textarea
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Escribe tu pregunta..."
-              className="w-full p-3 text-gray-800 resize-none focus:outline-none rounded-lg max-h-32"
+              className="w-full p-3 text-gray-800 resize-none focus:outline-none rounded-xl max-h-32"
               rows={1}
               style={{ minHeight: '44px' }}
             />
@@ -280,22 +315,37 @@ export const ChatInterface: React.FC = () => {
           <button
             onClick={handleSendMessage}
             disabled={!inputText.trim() || isLoading}
-            className={`p-2.5 rounded-full ${inputText.trim() && !isLoading
+            className={`p-3 rounded-full shadow-sm ${inputText.trim() && !isLoading
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              }`}
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              } transition-all`}
           >
             <Send size={18} />
           </button>
         </div>
 
-        <div className="mt-2 text-xs text-gray-500 text-center">
-          Sugerencias:
-          <div className="mt-1 flex flex-wrap justify-center gap-2">
-            {['Mostrar índice de morosidad', 'Generar reporte de liquidez', 'Análisis de cartera'].map((suggestion) => (
+        <div className="mt-4">
+          <div className="flex items-center justify-center mb-2">
+            <div className="h-px bg-gray-200 flex-grow"></div>
+            <button 
+              className="mx-2 text-xs text-gray-500 flex items-center hover:text-blue-600 transition-colors"
+              onClick={() => document.getElementById('suggestions')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Sugerencias <ChevronDown size={14} className="ml-1" />
+            </button>
+            <div className="h-px bg-gray-200 flex-grow"></div>
+          </div>
+          <div id="suggestions" className="flex flex-wrap justify-center gap-2">
+            {[
+              'Mostrar índice de morosidad', 
+              'Generar reporte de liquidez', 
+              'Análisis de cartera',
+              'Tendencias de ahorro',
+              'Proyección financiera'
+            ].map((suggestion) => (
               <button
                 key={suggestion}
-                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs"
+                className="px-3 py-1.5 bg-white border border-blue-200 hover:bg-blue-50 hover:border-blue-300 rounded-full text-sm text-blue-700 shadow-sm transition-all hover:scale-105 active:scale-95"
                 onClick={() => setInputText(suggestion)}
               >
                 {suggestion}
