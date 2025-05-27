@@ -228,4 +228,87 @@ export const authService = {
       throw error;
     }
   },
+
+  /**
+   * Obtener todos los usuarios (solo para administradores)
+   * @param token Token JWT del administrador
+   * @returns Lista de usuarios
+   */
+  async getAllUsers(token: string) {
+    try {
+      const response = await fetch(`/api/auth/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al obtener usuarios');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error al obtener usuarios:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Actualizar el rol de un usuario (solo para administradores)
+   * @param token Token JWT del administrador
+   * @param userId ID del usuario a actualizar
+   * @param newRole Nuevo rol a asignar
+   * @param officeId ID de la oficina (requerido para roles de gerente/analista)
+   * @returns Usuario actualizado
+   */
+  async updateUserRole(token: string, userId: string, newRole: string, officeId?: string) {
+    try {
+      const response = await fetch(`/api/auth/users/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, newRole, officeId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar rol de usuario');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error al actualizar rol de usuario:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Eliminar un usuario (solo para administradores)
+   * @param token Token JWT del administrador
+   * @param userId ID del usuario a eliminar
+   * @returns Mensaje de confirmación
+   */
+  async deleteUser(token: string, userId: string) {
+    try {
+      const response = await fetch(`/api/auth/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar usuario');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      throw error;
+    }
+  }
 };

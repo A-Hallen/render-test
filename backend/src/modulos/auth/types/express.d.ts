@@ -12,6 +12,12 @@ declare global {
         permissions?: string[];
       };
     }
+    export interface Router {
+        get(path: string, handler: (req: express.Request, res: express.Response, next?: express.NextFunction) => any): Router;
+        post(path: string, handler: (req: express.Request, res: express.Response, next?: express.NextFunction) => any): Router;
+        put(path: string, handler: (req: express.Request, res: express.Response, next?: express.NextFunction) => any): Router;
+        delete(path: string, handler: (req: express.Request, res: express.Response, next?: express.NextFunction) => any): Router;
+    }
   }
 }
 

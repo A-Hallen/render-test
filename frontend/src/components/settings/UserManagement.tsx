@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../../types/auth';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
-import { Trash2, Edit, Plus, X, Check, AlertCircle } from 'lucide-react';
+import { Trash2, Edit, Plus, X, Check, AlertCircle, ShieldAlert } from 'lucide-react';
 import { OficinasService, Oficina } from '../../services/OficinasService';
 
 export const UserManagement: React.FC = () => {
@@ -12,6 +12,7 @@ export const UserManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [unauthorized, setUnauthorized] = useState(false);
   
   // Nuevo usuario
   const [newUser, setNewUser] = useState({
@@ -22,27 +23,27 @@ export const UserManagement: React.FC = () => {
     officeId: ''
   });
   
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
   
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/auth/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Error al obtener usuarios');
+        if (!token) {
+          throw new Error('No hay token de autenticación');
         }
-        
-        const data = await response.json();
+        console.log("token", token);
+        const data = await authService.getAllUsers(token);
+        console.log("data", data)
         setUsers(data);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error al cargar usuarios:', error);
-        setError('No se pudieron cargar los usuarios');
+        if (error.status === 403) {
+          setUnauthorized(true);
+          setError('No tiene permisos para gestionar usuarios');
+        } else {
+          setError(error.message || 'No se pudieron cargar los usuarios');
+        }
       } finally {
         setLoading(false);
       }
@@ -57,9 +58,16 @@ export const UserManagement: React.FC = () => {
       }
     };
     
-    fetchUsers();
-    fetchOficinas();
-  }, [token]);
+    // Verificar si el usuario actual tiene permisos de administrador
+    if (!token || currentUser?.role !== UserRole.ADMIN) {
+      setUnauthorized(true);
+      setError('No tiene permisos para gestionar usuarios');
+      setLoading(false);
+    } else {
+      fetchUsers();
+      fetchOficinas();
+    }
+  }, [token, currentUser]);
   
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,17 +84,10 @@ export const UserManagement: React.FC = () => {
       await authService.register(newUser);
       
       // Recargar usuarios
-      const response = await fetch('/api/auth/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al obtener usuarios');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
       }
-      
-      const data = await response.json();
+      const data = await authService.getAllUsers(token);
       setUsers(data);
       
       // Limpiar formulario
@@ -117,25 +118,12 @@ export const UserManagement: React.FC = () => {
         return;
       }
       
-      const response = await fetch('/api/auth/users/role', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userId,
-          newRole: role,
-          officeId
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al actualizar rol de usuario');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
       }
+      const updatedUser = await authService.updateUserRole(token, userId, role, officeId);
       
       // Actualizar usuario en la lista
-      const updatedUser = await response.json();
       setUsers(users.map(user => user.uid === userId ? updatedUser : user));
       
       setEditingUser(null);
@@ -155,16 +143,10 @@ export const UserManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      const response = await fetch(`/api/auth/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al eliminar usuario');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
       }
+      await authService.deleteUser(token, userId);
       
       // Eliminar usuario de la lista
       setUsers(users.filter(user => user.uid !== userId));
@@ -216,20 +198,31 @@ export const UserManagement: React.FC = () => {
         </div>
       )}
       
-      <div className="mb-4 flex justify-between items-center">
-        <p className="text-sm text-gray-600">
-          Administre los usuarios del sistema y sus roles
-        </p>
-        
-        <button
-          onClick={() => setShowAddUser(true)}
-          className="px-3 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition text-sm"
-          disabled={loading}
-        >
-          <Plus className="mr-1" size={16} />
-          <span>Añadir Usuario</span>
-        </button>
-      </div>
+      {unauthorized ? (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-6 rounded-md flex flex-col items-center gap-3 mb-4">
+          <ShieldAlert className="h-12 w-12 text-yellow-600" />
+          <h3 className="text-lg font-medium">Acceso Restringido</h3>
+          <p className="text-center">
+            La gestión de usuarios está limitada a administradores del sistema. <br />
+            Contacte con un administrador si necesita crear o modificar usuarios.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mb-4 flex justify-between items-center">
+            <p className="text-sm text-gray-600">
+              Administre los usuarios del sistema y sus roles
+            </p>
+            
+            <button
+              onClick={() => setShowAddUser(true)}
+              className="px-3 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition text-sm"
+              disabled={loading}
+            >
+              <Plus className="mr-1" size={16} />
+              <span>Añadir Usuario</span>
+            </button>
+          </div>
       
       {showAddUser && (
         <div className="bg-gray-50 border border-gray-200 rounded-md p-4 mb-6">
@@ -489,6 +482,8 @@ export const UserManagement: React.FC = () => {
           </tbody>
         </table>
       </div>
+        </>
+      )}
     </div>
   );
 };

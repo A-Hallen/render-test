@@ -59,8 +59,14 @@ export class AuthService {
         throw { code: authResult.code || 'auth/invalid-credentials', message: authResult.message || 'Credenciales inválidas' };
       }
       
-      // Generar token JWT para la sesión
-      const token = await this.authRepository.generateCustomToken(user.uid);
+      // Verificar que tenemos un ID token válido
+      if (!authResult.idToken) {
+        throw { code: 'auth/invalid-token', message: 'No se pudo obtener un token válido' };
+      }
+      
+      // Usamos directamente el idToken de la respuesta de Firebase Auth
+      // Este es un ID token válido que puede ser verificado con verifyIdToken
+      const token = authResult.idToken;
       
       // Actualizar último acceso del usuario
       await this.authRepository.updateLastLogin(user.uid);

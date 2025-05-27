@@ -412,7 +412,7 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
    * Autentica a un usuario con email y contraseña usando la API REST de Firebase
    * @param email Email del usuario
    * @param password Contraseña del usuario
-   * @returns Resultado de la autenticación
+   * @returns Resultado de la autenticación con idToken
    */
   async signInWithEmailAndPassword(email: string, password: string): Promise<AuthApiResponse> {
     try {
@@ -430,10 +430,14 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
         }
       );
 
+      // Extraer el idToken y otros datos importantes
+      const { idToken, refreshToken, expiresIn, localId } = response.data;
+
       return {
         success: true,
         message: 'Autenticación exitosa',
-        data: response.data
+        data: response.data,
+        idToken: idToken // Exponer el idToken directamente para facilitar su acceso
       };
     } catch (error: any) {
       console.error('Error en autenticación con Firebase:', error.response?.data || error.message);

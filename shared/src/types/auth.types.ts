@@ -103,7 +103,14 @@ export interface AuthApiResponse {
   success: boolean;
   message: string;
   code?: string;
-  data?: any;
+  data?: {
+    idToken?: string;
+    refreshToken?: string;
+    expiresIn?: string;
+    localId?: string;
+    [key: string]: any;
+  };
+  idToken?: string; // Para acceso directo al token
 }
 
 /**

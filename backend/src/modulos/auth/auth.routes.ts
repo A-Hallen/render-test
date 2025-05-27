@@ -26,35 +26,41 @@ export class AuthRoutes {
     this.router.post('/send-verification-email', this.authController.sendEmailVerification.bind(this.authController));
 
     // Rutas protegidas - requieren autenticación
-    this.router.get('/profile', 
+    this.router.get(
+      '/profile', 
       this.authMiddleware.verifyToken.bind(this.authMiddleware),
       this.authController.getProfile.bind(this.authController)
     );
     
-    this.router.put('/profile', 
+    this.router.put(
+      '/profile', 
       this.authMiddleware.verifyToken.bind(this.authMiddleware),
       this.authController.updateProfile.bind(this.authController)
     );
     
-    this.router.post('/change-password', 
+    this.router.post(
+      '/change-password', 
       this.authMiddleware.verifyToken.bind(this.authMiddleware),
       this.authController.changePassword.bind(this.authController)
     );
 
     // Rutas de administración - requieren rol de administrador
-    this.router.get('/users', 
+    this.router.get(
+      '/users', 
       this.authMiddleware.verifyToken.bind(this.authMiddleware),
       this.authMiddleware.hasRole(UserRole.ADMIN),
       this.authController.getAllUsers.bind(this.authController)
     );
     
-    this.router.put('/users/role', 
+    this.router.put(
+      '/users/role', 
       this.authMiddleware.verifyToken.bind(this.authMiddleware),
       this.authMiddleware.hasRole(UserRole.ADMIN),
       this.authController.updateUserRole.bind(this.authController)
     );
     
-    this.router.delete('/users/:userId', 
+    this.router.delete(
+      '/users/:userId', 
       this.authMiddleware.verifyToken.bind(this.authMiddleware),
       this.authMiddleware.hasRole(UserRole.ADMIN),
       this.authController.deleteUser.bind(this.authController)

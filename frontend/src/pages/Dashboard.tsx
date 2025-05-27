@@ -1,8 +1,8 @@
 import React from 'react';
 import { KpiCard } from '../components/dashboard/KpiCard';
 import { ChartCard } from '../components/dashboard/ChartCard';
-import { CreditCard, Users, PiggyBank, DollarSign, BarChart3 } from 'lucide-react';
-import { IndicadoresChart } from '../features/dashboard/IndicadoresChart';
+import { CreditCard, Users, PiggyBank, BarChart3 } from 'lucide-react';
+import { ApexIndicadoresChart } from '../features/dashboard/ApexIndicadoresChart';
 
 export const Dashboard: React.FC = () => {
   // Sample data for charts
@@ -97,7 +97,13 @@ export const Dashboard: React.FC = () => {
           height={300}
         />
       </div>
-      <IndicadoresChart />
+      
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-800">Indicadores Contables</h2>
+        </div>
+        <ApexIndicadoresChart />
+      </div>
     </div>
   );
 };
