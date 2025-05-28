@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -19,9 +19,19 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
 
-export const Sidebar: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
+export interface SidebarProps {
+  collapsed: boolean;
+  toggleSidebar: () => void;
+  // Add optional prop for mobile view handling
+  isMobile?: boolean;
+  setCollapsed?: (state: boolean) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMobile = false, setCollapsed }) => {
+  // Usar user y acceder a profileVersion para forzar re-renderizado cuando cambia la imagen
   const { user } = useAuth();
+  // Acceder a profileVersion para asegurar que el componente se re-renderice
+  useAuth().profileVersion;
 
   const navItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
@@ -49,7 +59,7 @@ export const Sidebar: React.FC = () => {
         {!collapsed && <h1 className="text-xl font-semibold">FinCoop AI</h1>}
         <button 
           className="ml-auto text-blue-200 hover:text-white"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggleSidebar}
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
@@ -61,6 +71,12 @@ export const Sidebar: React.FC = () => {
             <NavLink
               key={item.name}
               to={item.path}
+              onClick={() => {
+                // Close sidebar on mobile when a link is clicked
+                if (isMobile && setCollapsed) {
+                  setCollapsed(true);
+                }
+              }}
               className={({ isActive }) => `
                 flex items-center py-2 px-3 rounded-md transition duration-150 ease-in-out
                 ${isActive 
@@ -84,7 +100,7 @@ export const Sidebar: React.FC = () => {
                 <img 
                   src={user.photoURL} 
                   alt={user.displayName || 'Usuario'} 
-                  className="h-8 w-8 rounded-full border border-blue-600" 
+                  className="h-8 w-8 rounded-full border border-blue-600 object-cover" 
                 />
               ) : (
                 <div className="h-8 w-8 rounded-full bg-blue-700 flex items-center justify-center">

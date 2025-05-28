@@ -11,6 +11,7 @@ import { Deposits } from './pages/Deposits';
 import { Visualizacion3D } from './pages/Visualizacion3D';
 import { Sincronizacion } from './pages/Sincronizacion';
 import { IndicadoresContables } from './pages/IndicadoresContables';
+import Profile from './pages/Profile';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { DataProvider } from './context/DataContext';
@@ -41,6 +42,7 @@ function App() {
                   <Route path="/sincronizacion" element={<Sincronizacion />} />
                   <Route path="/indicadores-contables" element={<IndicadoresContables />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/profile" element={<Profile />} />
                 </Route>
               </Routes>
             </Router>

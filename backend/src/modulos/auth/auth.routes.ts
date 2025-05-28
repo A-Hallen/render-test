@@ -1,17 +1,20 @@
 import { Router } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthMiddleware } from './auth.middleware';
+import { UploadController } from './upload.controller';
 import { UserRole } from './interfaces/user.interface';
 
 export class AuthRoutes {
   private router: Router;
   private authController: AuthController;
   private authMiddleware: AuthMiddleware;
+  private uploadController: UploadController;
 
   constructor() {
     this.router = Router();
     this.authController = new AuthController();
     this.authMiddleware = new AuthMiddleware();
+    this.uploadController = new UploadController();
     this.configureRoutes();
   }
 
@@ -36,6 +39,14 @@ export class AuthRoutes {
       '/profile', 
       this.authMiddleware.verifyToken.bind(this.authMiddleware),
       this.authController.updateProfile.bind(this.authController)
+    );
+    
+    // Ruta para subir imagen de perfil
+    this.router.post(
+      '/profile/image',
+      this.authMiddleware.verifyToken.bind(this.authMiddleware),
+      this.uploadController.uploadMiddleware,
+      this.uploadController.uploadProfileImage.bind(this.uploadController)
     );
     
     this.router.post(

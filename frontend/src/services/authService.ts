@@ -149,6 +149,39 @@ export const authService = {
   },
 
   /**
+   * Sube una imagen de perfil al servidor
+   * @param token Token JWT del usuario
+   * @param imageFile Archivo de imagen a subir
+   * @returns Datos actualizados del usuario con la nueva URL de imagen
+   */
+  async uploadProfileImage(token: string, imageFile: File) {
+    try {
+      // Crear un objeto FormData para enviar el archivo
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      
+      const response = await fetch(`/api/auth/profile/image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // No incluir Content-Type, se establece automáticamente con el boundary correcto
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al subir la imagen de perfil');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error al subir imagen de perfil:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Solicitar restablecimiento de contraseña
    * @param email Email del usuario
    * @returns Mensaje de confirmación

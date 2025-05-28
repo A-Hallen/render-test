@@ -396,7 +396,6 @@ export const Reports: React.FC = () => {
         tiposReporte={reportesActivos}
         onClose={handleNewReportClosed}
       />
-      <Toaster />
     </div>
   );
 };

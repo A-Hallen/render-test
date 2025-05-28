@@ -37,6 +37,8 @@ interface AuthContextType {
   can: (action: Action, resource: Resource, context?: any) => boolean;
   canAccessFinancialData: (action: Action, data: any) => boolean;
   filterAllowedData: <T extends Record<string, any>>(data: T[]) => T[];
+  updateUserState: (updatedUser: User) => void;
+  profileVersion: number; // Para forzar re-renderizado cuando cambia la imagen
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isEmailVerified, setIsEmailVerified] = useState<boolean>(false);
+  const [profileVersion, setProfileVersion] = useState<number>(0); // Contador para forzar re-renderizado
 
   useEffect(() => {
     // Check for saved auth in localStorage
@@ -395,6 +398,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return data.filter(item => canAccessFinancialData(Action.READ, item));
   };
 
+  /**
+   * Actualiza el estado del usuario y fuerza un re-renderizado
+   * @param updatedUser Usuario actualizado
+   */
+  const updateUserState = (updatedUser: User) => {
+    // Actualizar el estado del usuario
+    setUser(updatedUser);
+    
+    // Incrementar la versión del perfil para forzar re-renderizado
+    setProfileVersion(prev => prev + 1);
+    
+    // Actualizar localStorage
+    localStorage.setItem('fincoopUser', JSON.stringify(updatedUser));
+    
+    // Actualizar estado de verificación de email si es necesario
+    if (updatedUser.emailVerified !== isEmailVerified) {
+      setIsEmailVerified(updatedUser.emailVerified || false);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -411,7 +434,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isEmailVerified,
         can,
         canAccessFinancialData,
-        filterAllowedData
+        filterAllowedData,
+        updateUserState,
+        profileVersion
       }}
     >
       {children}

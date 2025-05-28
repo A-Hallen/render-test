@@ -19,8 +19,10 @@ const credentials = {
 // Configura Firebase
 admin.initializeApp({
   credential: admin.credential.cert(JSON.parse(JSON.stringify(credentials))),
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'ais-asistente.firebasestorage.app'
 });
 
-
-
+// Exportar servicios de Firebase
 export const firestore = admin.firestore();
+export const storage = admin.storage();
+export const auth = admin.auth();

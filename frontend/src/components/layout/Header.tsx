@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Bell, Search, HelpCircle, UserCircle, User, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
@@ -9,11 +10,16 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
+  // Usar profileVersion para forzar re-renderizado cuando cambia la imagen
   const { user, logout, sendEmailVerification, isEmailVerified } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const [isVerifying, setIsVerifying] = React.useState(false);
-  const [verificationMessage, setVerificationMessage] = React.useState<{text: string, type: 'success' | 'error'} | null>(null);
-  const menuRef = React.useRef<HTMLDivElement>(null);
+  // Acceder a profileVersion para asegurar que el componente se re-renderice
+  useAuth().profileVersion;
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+  const [menuAnimation, setMenuAnimation] = useState<'entering' | 'entered' | 'exiting' | 'exited'>('exited');
+  const menuRef = useRef<HTMLDivElement>(null);
+  const animationTimeoutRef = useRef<NodeJS.Timeout>();
   
   // Función para solicitar la verificación de email
   const requestEmailVerification = async () => {
@@ -41,18 +47,39 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
   };
   
   // Manejar clics fuera del menú para cerrarlo
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
+        closeMenu();
       }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      clearTimeout(animationTimeoutRef.current);
     };
   }, []);
+  
+  // Manejar animaciones del menú
+  useEffect(() => {
+    if (isMenuOpen) {
+      setMenuAnimation('entering');
+      animationTimeoutRef.current = setTimeout(() => {
+        setMenuAnimation('entered');
+      }, 50); // Pequeño retraso para que la transición se active
+    } else if (menuAnimation === 'entered' || menuAnimation === 'entering') {
+      setMenuAnimation('exiting');
+      animationTimeoutRef.current = setTimeout(() => {
+        setMenuAnimation('exited');
+      }, 300); // Duración de la animación de salida
+    }
+  }, [isMenuOpen]);
+  
+  // Función para cerrar el menú con animación
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
   
   return (
     <>
@@ -95,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
               <img 
                 src={user.photoURL} 
                 alt={user.displayName || 'Usuario'} 
-                className="h-7 w-7 rounded-full border border-gray-200" 
+                className="h-7 w-7 rounded-full border border-gray-200 object-cover" 
               />
             ) : (
               <UserCircle size={28} className="text-blue-800" />
@@ -105,8 +132,13 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
             </span>
           </button>
           
-          {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+          {(menuAnimation === 'entering' || menuAnimation === 'entered' || menuAnimation === 'exiting') && (
+            <div 
+              className={`absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200 transition-all duration-300 ease-in-out transform origin-top-right
+                ${menuAnimation === 'entering' ? 'scale-95 opacity-0' : ''}
+                ${menuAnimation === 'entered' ? 'scale-100 opacity-100' : ''}
+                ${menuAnimation === 'exiting' ? 'scale-95 opacity-0' : ''}
+              `}>
             {user && (
               <div className="px-4 py-3 border-b border-gray-100">
                 <p className="text-sm font-medium text-gray-900">{user.displayName}</p>
@@ -139,7 +171,10 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
             {/* Opción de verificación de email si no está verificado */}
             {user && !isEmailVerified && (
               <button 
-                onClick={requestEmailVerification}
+                onClick={() => {
+                  requestEmailVerification();
+                  closeMenu();
+                }}
                 disabled={isVerifying}
                 className="flex items-center w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100"
               >
@@ -150,17 +185,28 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
               </button>
             )}
             
-            <a href="#perfil" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            <Link 
+              to="/profile" 
+              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => closeMenu()}
+            >
               <User size={16} className="mr-2" />
               Perfil
-            </a>
-            <a href="#configuracion" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            </Link>
+            <Link 
+              to="/settings" 
+              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => closeMenu()}
+            >
               <Shield size={16} className="mr-2" />
               Configuración
-            </a>
+            </Link>
             <div className="border-t border-gray-100"></div>
             <button
-              onClick={logout}
+              onClick={() => {
+                logout();
+                closeMenu();
+              }}
               className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
