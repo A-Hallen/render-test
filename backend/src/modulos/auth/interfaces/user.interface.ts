@@ -10,7 +10,7 @@ import {
   PasswordResetRequest,
   UpdateRoleRequest,
   AuthApiResponse
-} from 'shared/src/types/auth.types';
+} from 'shared';
 
 // Re-exportar los tipos para mantener la compatibilidad con el código existente
 export { 

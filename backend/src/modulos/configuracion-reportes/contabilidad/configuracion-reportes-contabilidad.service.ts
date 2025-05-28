@@ -1,6 +1,7 @@
 import { ConfiguracionReporteContabilidad } from "./configuracion-reportes-contabilidad.model";
 import { ConfiguracionReportesContabilidadRepository } from "./configuracion-reportes-contabilidad.repository";
 import {
+  ApiResponse,
   ConfiguracionesActivasResponse,
   ConfiguracionGuardadaResponse,
   adaptarDatosReporte,
@@ -8,8 +9,7 @@ import {
   CuentaResponse,
   ReporteTendenciaRequest,
   ReporteTendenciaResponse,
-} from "shared/src/types/reportes.types";
-import { ApiResponse } from "shared/src/types/generic.types";
+} from "shared";
 
 export class ConfiguracionReportesContabilidadService {
   private configuracionReportesContabilidadRepository: ConfiguracionReportesContabilidadRepository;
