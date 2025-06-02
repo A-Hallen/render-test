@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KpiFormulaEditor } from '../components/settings/KpiFormulaEditor';
 import { UserManagement } from '../components/settings/UserManagement';
+import { N8nChatConfig } from '../components/settings/N8nChatConfig';
 import {
   Globe,
   User,
@@ -424,6 +425,17 @@ export const Settings: React.FC = () => {
                     <p className="text-sm text-blue-800">
                       Configure integraciones con servicios externos y herramientas de automatización.
                     </p>
+                  </div>
+
+                  {/* N8n Chat Integration */}
+                  <div className="border border-gray-200 rounded-md overflow-hidden mb-6">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-gray-700">n8n Chat Asistente</h3>
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">Nuevo</span>
+                    </div>
+                    <div className="p-4">
+                      <N8nChatConfig />
+                    </div>
                   </div>
 
                   <div className="border border-gray-200 rounded-md overflow-hidden">

@@ -99,7 +99,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         </div>
       </div>
 
-      <Chart
+      {/* <Chart
         type={type}
         data={data}
         xDataKey={xDataKey}
@@ -107,7 +107,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         height={height}
         showGrid={true}
         showLegend={true}
-      />
+      /> */}
     </div>
   );
 };

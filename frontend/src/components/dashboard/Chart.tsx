@@ -47,17 +47,31 @@ export const Chart: React.FC<ChartProps> = ({
   showTooltip = true,
   stackedBars = false,
 }) => {
+  // Filtrar los datos para eliminar puntos donde todas las series tienen valor 0 o null/undefined
+  const filteredData = data.filter(point => {
+    // Verificar si al menos una serie tiene datos válidos
+    return series.some(s => {
+      const value = point[s.dataKey];
+      return value !== null && value !== undefined && value !== 0 && value !== '';
+    });
+  });
+  
+  // Extraer solo las fechas válidas para el eje X
+  const validXValues = filteredData.map(item => item[xDataKey]);
   const renderChart = () => {
     switch (type) {
       case 'line':
         return (
-          <LineChart data={data}>
+          <LineChart data={filteredData}>
             {showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} />}
             <XAxis 
               dataKey={xDataKey} 
               tick={{ fontSize: 12 }} 
               axisLine={{ stroke: '#E5E7EB' }} 
               tickLine={false} 
+              ticks={validXValues}
+              interval="preserveStartEnd"
+              domain={['dataMin', 'dataMax']}
             />
             <YAxis 
               tick={{ fontSize: 12 }} 
@@ -83,13 +97,16 @@ export const Chart: React.FC<ChartProps> = ({
       
       case 'bar':
         return (
-          <BarChart data={data}>
+          <BarChart data={filteredData}>
             {showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} />}
             <XAxis 
               dataKey={xDataKey} 
               tick={{ fontSize: 12 }} 
               axisLine={{ stroke: '#E5E7EB' }} 
-              tickLine={false} 
+              tickLine={false}
+              ticks={validXValues}
+              interval="preserveStartEnd"
+              domain={['dataMin', 'dataMax']}
             />
             <YAxis 
               tick={{ fontSize: 12 }} 
@@ -114,13 +131,16 @@ export const Chart: React.FC<ChartProps> = ({
       
       case 'area':
         return (
-          <AreaChart data={data}>
+          <AreaChart data={filteredData}>
             {showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} />}
             <XAxis 
               dataKey={xDataKey} 
               tick={{ fontSize: 12 }} 
               axisLine={{ stroke: '#E5E7EB' }} 
-              tickLine={false} 
+              tickLine={false}
+              ticks={validXValues}
+              interval="preserveStartEnd"
+              domain={['dataMin', 'dataMax']}
             />
             <YAxis 
               tick={{ fontSize: 12 }} 
@@ -149,9 +169,12 @@ export const Chart: React.FC<ChartProps> = ({
     }
   };
 
+  // Asegurarse de que siempre devolvemos un elemento React válido
+  const chartElement = renderChart();
+  
   return (
     <ResponsiveContainer width="100%" height={height}>
-      {renderChart()}
+      {chartElement || <div>No hay datos disponibles</div>}
     </ResponsiveContainer>
   );
 };
