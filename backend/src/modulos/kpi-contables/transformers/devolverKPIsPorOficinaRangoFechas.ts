@@ -72,7 +72,7 @@ export const devolverKPIsPorOficinaRangoFechas = async (
         console.log(`[devolverKPIsPorOficinaRangoFechas] Usando fecha actual: ${fechaInicioObj.toISOString()}`);
       }
       
-      // Generar arrays de fechas entre inicio y fin
+      // Generar arrays solo con las fechas de fin de mes entre inicio y fin
       const fechasStr: string[] = [];
       const fechasDate: Date[] = [];
       const fechaActual = new Date(fechaInicioObj);
@@ -85,13 +85,33 @@ export const devolverKPIsPorOficinaRangoFechas = async (
         return `${año}-${mes}-${dia}`;
       };
       
-      while (fechaActual <= fechaFinObj) {
-        fechasStr.push(formatearFecha(fechaActual));
-        fechasDate.push(new Date(fechaActual));
-        fechaActual.setDate(fechaActual.getDate() + 1);
+      // Función para determinar si una fecha es el último día del mes
+      const esUltimoDiaDelMes = (fecha: Date): boolean => {
+        const ultimoDia = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+        return fecha.getDate() === ultimoDia;
+      };
+      
+      // Ajustar fechaActual al último día del mes si no lo es
+      if (!esUltimoDiaDelMes(fechaActual)) {
+        // Avanzar al último día del mes actual
+        fechaActual.setDate(new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0).getDate());
       }
       
-      console.log(`[devolverKPIsPorOficinaRangoFechas] Consultando ${fechasDate.length} fechas para la oficina ${oficina}`);
+      // Iterar por los últimos días de cada mes en el rango
+      while (fechaActual <= fechaFinObj) {
+        // Solo agregar si es el último día del mes
+        if (esUltimoDiaDelMes(fechaActual)) {
+          fechasStr.push(formatearFecha(fechaActual));
+          fechasDate.push(new Date(fechaActual));
+        }
+        
+        // Avanzar al último día del siguiente mes
+        fechaActual.setMonth(fechaActual.getMonth() + 1);
+        // Asegurar que sea el último día del mes
+        fechaActual.setDate(new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0).getDate());
+      }
+      
+      console.log(`[devolverKPIsPorOficinaRangoFechas] Consultando ${fechasDate.length} fechas de fin de mes para la oficina ${oficina}`);
       console.log("fechas", fechasStr);
       // Obtener saldos desde el repositorio
       saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechasDate);

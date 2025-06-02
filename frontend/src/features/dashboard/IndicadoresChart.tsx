@@ -75,6 +75,7 @@ export const IndicadoresChart = () => {
         const indicadoresCalculados = Object.entries(result.kpisCalculados || {}).map(([fecha, kpisDelDia]: [string, any]) => {
             // Crear un objeto base con la fecha
             const datoDelDia: any = { month: fecha };
+            let tieneValores = false;
             
             // Si kpisDelDia es un array, procesarlo
             if (Array.isArray(kpisDelDia)) {
@@ -82,15 +83,17 @@ export const IndicadoresChart = () => {
                 kpisDelDia.forEach((kpi: any) => {
                     // Buscar el indicador correspondiente para obtener su nombre
                     const indicador = indicadores.find((ind: any) => ind.id === kpi.idIndicador);
-                    if (indicador) {
+                    if (indicador && kpi.valor !== null && kpi.valor !== undefined) {
                         // Usar el nombre del indicador como clave y el valor del KPI como valor
                         datoDelDia[indicador.nombre] = kpi.valor;
+                        tieneValores = true;
                     }
                 });
             }
             
-            return datoDelDia;
-        });
+            // Solo devolver el dato si tiene al menos un valor válido
+            return tieneValores ? datoDelDia : null;
+        }).filter(Boolean); // Filtrar elementos nulos
         
         return {
             indicadores,
@@ -131,12 +134,31 @@ export const IndicadoresChart = () => {
             );
         }
         
+        // Ordenar los datos por fecha para asegurar una visualización correcta
+        const sortedData = [...data.indicadoresCalculados].sort((a, b) => {
+            const dateA = new Date(a.month);
+            const dateB = new Date(b.month);
+            return dateA.getTime() - dateB.getTime();
+        });
+
+        // Formatear las fechas para mejor visualización
+        const formattedData = sortedData.map(item => {
+            // Convertir la fecha a formato más legible
+            const date = new Date(item.month);
+            const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            
+            return {
+                ...item,
+                month: formattedDate
+            };
+        });
+        
         return (
             <ChartCard
                 title="Indicadores Financieros"
                 subTitle="Evolución de indicadores clave (últimos 6 meses)"
                 type="line"
-                data={data.indicadoresCalculados}
+                data={formattedData}
                 xDataKey="month"
                 series={data.indicadores.map(indicador => ({
                     dataKey: indicador.nombre,
