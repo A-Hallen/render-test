@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Bot, User, Loader2, Info, ChevronDown } from 'lucide-react';
+import { Send, Paperclip, Bot, User, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
 import { InputAudio } from './InputAudio';
 import ReactMarkdown from "react-markdown";
 
@@ -191,6 +191,20 @@ export const ChatInterface: React.FC = () => {
 
   const [showInfo, setShowInfo] = useState(false);
 
+  const handleClearChat = () => {
+    // Keep only the initial welcome message
+    setMessages([
+      {
+        id: '1',
+        sender: 'ai',
+        text: 'Hola, soy el asistente financiero IA de la cooperativa. ¿En qué puedo ayudarte hoy?',
+        audio: null,
+        timestamp: new Date(),
+        state: "received"
+      },
+    ]);
+  };
+
   return (
     <div className="flex flex-col h-full bg-white rounded-lg shadow-lg border border-blue-100 overflow-hidden">
       <div className="p-4 border-b border-blue-100 bg-blue-600 text-white">
@@ -199,12 +213,22 @@ export const ChatInterface: React.FC = () => {
             <Bot className="mr-2" size={22} />
             Asistente Financiero IA
           </h2>
-          <button 
-            onClick={() => setShowInfo(!showInfo)}
-            className="p-1.5 rounded-full hover:bg-blue-500 transition-colors"
-          >
-            <Info size={18} />
-          </button>
+          <div className="flex space-x-2">
+            <button 
+              onClick={handleClearChat}
+              className="p-1.5 rounded-full hover:bg-blue-500 transition-colors"
+              title="Limpiar chat"
+            >
+              <Trash2 size={18} />
+            </button>
+            <button 
+              onClick={() => setShowInfo(!showInfo)}
+              className="p-1.5 rounded-full hover:bg-blue-500 transition-colors"
+              title="Información"
+            >
+              <Info size={18} />
+            </button>
+          </div>
         </div>
         
         {showInfo && (

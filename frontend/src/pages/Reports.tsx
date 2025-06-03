@@ -14,7 +14,7 @@ import {
   NuevoReporteView,
 } from "../features/reportes/nuevoReporte";
 import { OficinasDTO } from "shared/src/types/oficinas.types";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { ApiResponse } from "shared/src/types/generic.types";
 import {
   EliminarConfiguracionDialog,
