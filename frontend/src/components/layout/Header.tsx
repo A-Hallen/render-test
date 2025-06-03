@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Search, HelpCircle, UserCircle, User, Shield } from 'lucide-react';
+import { Bell, HelpCircle, UserCircle, User, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
 import { EmailVerificationAlert } from '../auth/EmailVerificationAlert';
+import { SearchInput } from '../search/SearchInput';
 
 interface HeaderProps {
   toggleNotifications: (state: boolean) => void;
@@ -90,14 +91,7 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
       </div>
       
       <div className="hidden md:flex items-center flex-1 max-w-lg mx-auto">
-        <div className="relative w-full">
-          <input
-            type="text"
-            placeholder="Buscar..."
-            className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-        </div>
+        <SearchInput />
       </div>
       
       <div className="flex items-center space-x-3">
