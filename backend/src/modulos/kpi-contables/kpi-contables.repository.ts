@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { IndicadorContable } from "../indicadores-contables/interfaces/IndicadorContable.interface";
 import { devolverKPIsPorOficinaRangoFechas } from "./transformers/devolverKPIsPorOficinaRangoFechas";
 import { IndicadoresContablesRepository } from "../indicadores-contables/indicadores-contables.repository";
+import { KPICalculado } from "./interfaces/KPICalculado.interface";
 
 // Definimos localmente la interfaz necesaria para evitar problemas de importación
 interface IndicadorColor {
@@ -91,6 +92,99 @@ export class KPIContablesRepository {
         indicadores: [],
         kpisCalculados: {},
         mensaje: `Error al obtener KPIs: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Obtiene un KPI específico para una oficina en una fecha determinada
+   * @param oficina Código de la oficina
+   * @param idIndicador ID del indicador
+   * @param fecha Fecha en formato YYYY-MM-DD
+   * @returns Objeto con el KPI solicitado o null si no existe
+   */
+  async obtenerKPIEspecifico(
+    oficina: string,
+    idIndicador: string,
+    fecha: string
+  ): Promise<{
+    indicador: IndicadorColor | null;
+    kpi: KPICalculado | null;
+    mensaje?: string;
+  }> {
+    try {
+      console.log(`[KPIContablesRepository] Obteniendo KPI específico para oficina: ${oficina}, indicador: ${idIndicador}, fecha: ${fecha}`);
+      
+      // Obtener el indicador solicitado
+      const indicador = await this.indicadoresRepository.obtenerPorId(idIndicador);
+      
+      if (!indicador) {
+        console.log(`[KPIContablesRepository] No se encontró el indicador con ID: ${idIndicador}`);
+        return {
+          indicador: null,
+          kpi: null,
+          mensaje: `No se encontró el indicador con ID: ${idIndicador}`
+        };
+      }
+      
+      // Obtener los KPIs calculados para esa fecha
+      const resultado = await devolverKPIsPorOficinaRangoFechas(
+        [indicador],
+        oficina,
+        fecha,
+        fecha
+      );
+      
+      // Verificar si hay resultados para la fecha solicitada
+      if (!resultado.kpisCalculados || !resultado.kpisCalculados[fecha]) {
+        console.log(`[KPIContablesRepository] No hay KPIs calculados para la fecha: ${fecha}`);
+        return {
+          indicador: {
+            id: indicador.id,
+            nombre: indicador.nombre,
+            color: indicador.color
+          },
+          kpi: null,
+          mensaje: `No hay datos disponibles para el indicador en la fecha solicitada`
+        };
+      }
+      
+      // Buscar el KPI específico
+      const kpiEncontrado = resultado.kpisCalculados[fecha].find(
+        kpi => kpi.idIndicador.toString() === idIndicador && kpi.codigoOficina.toString() === oficina
+      );
+      
+      if (!kpiEncontrado) {
+        console.log(`[KPIContablesRepository] No se encontró el KPI específico`);
+        return {
+          indicador: {
+            id: indicador.id,
+            nombre: indicador.nombre,
+            color: indicador.color
+          },
+          kpi: null,
+          mensaje: `No se encontró el KPI para el indicador ${indicador.nombre} en la fecha ${fecha}`
+        };
+      }
+      
+      console.log(`[KPIContablesRepository] KPI encontrado correctamente`);
+      
+      return {
+        indicador: {
+          id: indicador.id,
+          nombre: indicador.nombre,
+          color: indicador.color
+        },
+        kpi: kpiEncontrado,
+        mensaje: 'KPI obtenido correctamente'
+      };
+    } catch (error: any) {
+      console.error(`[KPIContablesRepository] Error al obtener KPI específico: ${error.message}`);
+      
+      return {
+        indicador: null,
+        kpi: null,
+        mensaje: `Error al obtener el KPI: ${error.message}`
       };
     }
   }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Spinner } from '../components/ui';
-import { Calendar, Search, RefreshCw } from 'lucide-react';
+import { Calendar, Search, RefreshCw, Info } from 'lucide-react';
 import { IndicadorCircular } from '../components/indicadores';
+import { DetalleIndicador } from '../components/indicadores/DetalleIndicador';
 import { OficinasService, Oficina } from '../services/OficinasService';
 import '../components/ui/DateInput.css';  // Importar estilos para el input de fecha
 
@@ -11,13 +12,19 @@ interface IndicadorContable {
   valor: number;
   rendimiento: 'DEFICIENTE' | 'ACEPTABLE' | 'BUENO';
   color: string;
+  componentes?: {
+    numerador: number;
+    denominador: number;
+    detalle: {
+      numerador: Record<string, number>;
+      denominador: Record<string, number>;
+    };
+  };
 }
 
 interface FiltrosIndicadores {
   oficina: string;
   fecha: string;
-  fechaFin: string;
-  modoRango: boolean;
 }
 
 // Servicio para manejar las llamadas a la API de KPIs contables
@@ -52,14 +59,15 @@ export const IndicadoresContables: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<FiltrosIndicadores>({
     oficina: 'MATRIZ',
-    fecha: formatearFechaParaInput(new Date()),
-    fechaFin: formatearFechaParaInput(new Date()),
-    modoRango: false
+    fecha: formatearFechaParaInput(new Date())
   });
   
   // Estado para las fechas mostradas al usuario en formato DD/MM/YYYY
   const [fechaMostrada, setFechaMostrada] = useState<string>(formatearFechaParaMostrar(formatearFechaParaInput(new Date())));
-  const [fechaFinMostrada, setFechaFinMostrada] = useState<string>(formatearFechaParaMostrar(formatearFechaParaInput(new Date())));
+  
+  // Estado para el modal de detalle de indicador
+  const [indicadorSeleccionado, setIndicadorSeleccionado] = useState<IndicadorContable | null>(null);
+  const [modalAbierto, setModalAbierto] = useState<boolean>(false);
 
   // Función para formatear fecha en formato YYYY-MM-DD para input type="date"
   function formatearFechaParaInput(fecha: Date): string {
@@ -111,9 +119,8 @@ export const IndicadoresContables: React.FC = () => {
       // Usar los valores actuales de los filtros
       const oficinaSeleccionada = filtros.oficina;
       const fechaSeleccionada = filtros.fecha;
-      const fechaFinSeleccionada = filtros.modoRango ? filtros.fechaFin : fechaSeleccionada;
       
-      const data = await KPIContablesService.obtenerKPIsPorFecha(oficinaSeleccionada, fechaSeleccionada, fechaFinSeleccionada);
+      const data = await KPIContablesService.obtenerKPIsPorFecha(oficinaSeleccionada, fechaSeleccionada, fechaSeleccionada);
       
       // Verificar si hay indicadores calculados para la fecha
       if (!data.kpisCalculados || Object.keys(data.kpisCalculados).length === 0) {
@@ -165,12 +172,16 @@ export const IndicadoresContables: React.FC = () => {
         // Buscar el indicador correspondiente en la lista de indicadores
         const indicadorInfo = data.indicadores.find((ind: IndicadorAPI) => ind.id === kpi.idIndicador);
         
+        // Multiplicar el valor por 100 para convertirlo a porcentaje
+        const valorPorcentaje = kpi.valor * 100;
+        
         return {
           id: kpi.idIndicador,
           nombre: indicadorInfo?.nombre || kpi.idIndicador,
-          valor: kpi.valor,
-          rendimiento: determinarRendimiento(kpi.valor),
-          color: indicadorInfo?.color || determinarColor(kpi.valor)
+          valor: valorPorcentaje,
+          rendimiento: determinarRendimiento(valorPorcentaje),
+          color: indicadorInfo?.color || determinarColor(valorPorcentaje),
+          componentes: kpi.componentes
         };
       });
       
@@ -183,7 +194,7 @@ export const IndicadoresContables: React.FC = () => {
     }
   };
 
-  // Función para determinar el rendimiento basado en el valor
+  // Función para determinar el rendimiento basado en el valor (ya en porcentaje)
   const determinarRendimiento = (valor: number): 'DEFICIENTE' | 'ACEPTABLE' | 'BUENO' => {
     if (valor < 40) return 'DEFICIENTE';
     if (valor < 70) return 'ACEPTABLE';
@@ -206,28 +217,22 @@ export const IndicadoresContables: React.FC = () => {
   const handleFechaChange = (nuevaFecha: string) => {
     setFiltros(prev => ({ ...prev, fecha: nuevaFecha }));
     setFechaMostrada(formatearFechaParaMostrar(nuevaFecha));
-    
-    // Si la fecha de inicio es posterior a la fecha fin, actualizar la fecha fin
-    if (nuevaFecha > filtros.fechaFin) {
-      setFiltros(prev => ({ ...prev, fechaFin: nuevaFecha }));
-      setFechaFinMostrada(formatearFechaParaMostrar(nuevaFecha));
-    }
   };
   
-  // Manejar cambio de fecha fin desde el input personalizado
-  const handleFechaFinChange = (nuevaFechaFin: string) => {
-    setFiltros(prev => ({ ...prev, fechaFin: nuevaFechaFin }));
-    setFechaFinMostrada(formatearFechaParaMostrar(nuevaFechaFin));
+  // Función para abrir el modal con los detalles del indicador
+  const abrirModalDetalles = (indicador: IndicadorContable) => {
+    setIndicadorSeleccionado(indicador);
+    setModalAbierto(true);
   };
   
-  // Manejar cambio en el modo de rango
-  const handleModoRangoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFiltros(prev => ({ ...prev, modoRango: e.target.checked }));
+  // Función para cerrar el modal
+  const cerrarModalDetalles = () => {
+    setModalAbierto(false);
+    setTimeout(() => setIndicadorSeleccionado(null), 300); // Limpiar después de la animación
   };
   
-  // Referencias a los inputs de fecha
+  // Referencia al input de fecha
   const dateInputRef = React.useRef<HTMLInputElement>(null);
-  const dateFinInputRef = React.useRef<HTMLInputElement>(null);
 
   // Manejar clic en consultar
   const handleConsultar = () => {
@@ -235,7 +240,8 @@ export const IndicadoresContables: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <>
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Indicadores Contables</h1>
         <div className="text-sm text-gray-500">
@@ -289,26 +295,12 @@ export const IndicadoresContables: React.FC = () => {
               </div>
             </div>
             
-            {/* Modo de consulta */}
-            <div className="md:col-span-2">
-              <div className="flex items-center mb-2">
-                <input
-                  type="checkbox"
-                  id="modoRango"
-                  checked={filtros.modoRango}
-                  onChange={handleModoRangoChange}
-                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-                <label htmlFor="modoRango" className="ml-2 block text-sm font-medium text-gray-700">
-                  Consultar por rango de fechas
-                </label>
-              </div>
-            </div>
+
             
             {/* Fecha Inicio */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {filtros.modoRango ? 'Fecha Inicio:' : 'Fecha:'}
+                Fecha:
               </label>
               <div className="relative h-10"> {/* Altura fija para todos los controles */}
                 {/* Contenedor del input de fecha personalizado con clases CSS */}
@@ -330,31 +322,7 @@ export const IndicadoresContables: React.FC = () => {
               </div>
             </div>
             
-            {/* Fecha Fin (solo visible en modo rango) */}
-            {filtros.modoRango && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin:</label>
-                <div className="relative h-10"> {/* Altura fija para todos los controles */}
-                  {/* Contenedor del input de fecha personalizado con clases CSS */}
-                  <div className="custom-date-input h-full">
-                    <input
-                      ref={dateFinInputRef}
-                      type="date"
-                      value={filtros.fechaFin}
-                      min={filtros.fecha} // No permitir fechas anteriores a la fecha de inicio
-                      onChange={(e) => handleFechaFinChange(e.target.value)}
-                      className="h-10 absolute inset-0" /* Altura fija igual que los demás controles */
-                    />
-                    <div className="date-display-overlay">
-                      <span className="date-display-text text-sm">
-                        {fechaFinMostrada || 'Seleccionar fecha'}
-                      </span>
-                      <Calendar className="h-4 w-4 date-icon" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+
           </div>
           
           {/* Botón de consulta */}
@@ -415,10 +383,7 @@ export const IndicadoresContables: React.FC = () => {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                 </svg>
-                Indicadores para {filtros.oficina} {filtros.modoRango ? 
-                  `(${fechaMostrada} - ${fechaFinMostrada})` : 
-                  `(${fechaMostrada})`
-                }
+                Indicadores para {filtros.oficina} ({fechaMostrada})
               </h2>
               <Button 
                 onClick={handleConsultar} 
@@ -434,12 +399,22 @@ export const IndicadoresContables: React.FC = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {indicadores.map((indicador) => (
-                  <div key={indicador.id} className="bg-white rounded-xl p-4 flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
-                    <h3 className="text-lg font-medium mb-2 text-gray-800 text-center">{indicador.nombre}</h3>
+                  <div 
+                    key={indicador.id} 
+                    className="bg-white rounded-xl p-4 flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 cursor-pointer group"
+                    onClick={() => abrirModalDetalles(indicador)}
+                  >
+                    <div className="w-full flex justify-between items-center mb-2">
+                      <h3 className="text-lg font-medium text-gray-800">{indicador.nombre}</h3>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <Info className="h-5 w-5 text-blue-500" />
+                      </div>
+                    </div>
                     <IndicadorCircular 
                       valor={indicador.valor} 
                       etiqueta={indicador.rendimiento} 
-                      color={indicador.color} 
+                      color={indicador.color}
+                      onClick={() => abrirModalDetalles(indicador)}
                     />
                   </div>
                 ))}
@@ -474,6 +449,15 @@ export const IndicadoresContables: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+      
+      {/* Modal de detalle de indicador */}
+      <DetalleIndicador 
+        isOpen={modalAbierto}
+        onClose={cerrarModalDetalles}
+        indicador={indicadorSeleccionado}
+      />
+    </>
   );
 };
+

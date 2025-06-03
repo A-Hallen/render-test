@@ -7,5 +7,6 @@ const kpiContablesController = new KPIContablesController();
 // Rutas para KPIs contables
 router.get('/promedio', kpiContablesController.obtenerPromedioKPIsOficina.bind(kpiContablesController));
 router.get('/rango-fechas', kpiContablesController.obtenerKPIsPorOficinaRangosFecha.bind(kpiContablesController));
+router.get('/indicador', kpiContablesController.obtenerKPIEspecifico.bind(kpiContablesController));
 
 export default router;

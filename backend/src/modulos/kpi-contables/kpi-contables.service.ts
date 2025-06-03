@@ -30,4 +30,16 @@ export class KPIContablesService {
         console.log("[service] Obteniendo KPIs por oficina y rango de fechas...");
         return await this.kpiContablesRepository.obtenerKPIsPorOficinaRangosFecha(oficina, fechaInicio, fechaFin);
     }
+
+    /**
+     * Obtiene un KPI específico para una oficina en una fecha determinada
+     * @param oficina Código de la oficina
+     * @param idIndicador ID del indicador
+     * @param fecha Fecha en formato YYYY-MM-DD
+     * @returns Objeto con el KPI solicitado o null si no existe
+     */
+    async obtenerKPIEspecifico(oficina: string, idIndicador: string, fecha: string) {
+        console.log("[service] Obteniendo KPI específico...");
+        return await this.kpiContablesRepository.obtenerKPIEspecifico(oficina, idIndicador, fecha);
+    }
 }

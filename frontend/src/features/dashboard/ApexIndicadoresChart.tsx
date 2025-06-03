@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { IndicadorCalcularPeriodoResponse } from "shared/src/types/indicadores.types";
-import { OficinasDTO } from "shared/src/types/oficinas.types";
 import ReactApexChart from 'react-apexcharts';
 import { useOficinas } from "../../context/DataContext";
 
@@ -19,8 +18,8 @@ export const ApexIndicadoresChart = () => {
         fetchOficinasIfNeeded();
     }, [fetchOficinasIfNeeded]);
     
-    // Función para obtener el texto descriptivo del periodo
-    const getDescripcionPeriodo = (periodo: '1m' | '3m' | '6m' | '1y'): string => {
+    // Función para obtener el texto descriptivo del periodo que se muestra en la UI
+    const getDescripcionPeriodoUI = (periodo: '1m' | '3m' | '6m' | '1y'): string => {
         switch (periodo) {
             case '1m': return 'último mes';
             case '3m': return 'últimos 3 meses';
@@ -89,6 +88,8 @@ export const ApexIndicadoresChart = () => {
         try {
             setIsLoading(true);
             setError(null);
+
+            console.log("obteniendo inficadores para las fechas", inicio, fin, codigoOficina);
             
             // Actualizado para usar la nueva ruta del módulo de KPI contables con la oficina seleccionada
             const response = await fetch(`/api/kpi-contables/rango-fechas?oficina=${codigoOficina}&fechaInicio=${inicio}&fechaFin=${fin}`);
@@ -98,6 +99,8 @@ export const ApexIndicadoresChart = () => {
             }
             
             const result = await response.json();
+
+            console.log("result", result);
             
             if (result.error) {
                 throw new Error(result.error);
@@ -145,6 +148,18 @@ export const ApexIndicadoresChart = () => {
             return datoDelDia;
         });
         
+        // Ordenar los datos por fecha para asegurar que se muestren en orden cronológico
+        indicadoresCalculados.sort((a, b) => {
+            const fechaA = new Date(a.month).getTime();
+            const fechaB = new Date(b.month).getTime();
+            return fechaA - fechaB;
+        });
+        
+        console.log("Datos transformados para gráfico:", {
+            indicadores,
+            indicadoresCalculados
+        });
+        
         return {
             indicadores,
             indicadoresCalculados
@@ -157,11 +172,30 @@ export const ApexIndicadoresChart = () => {
         
         return data.indicadores.map(indicador => ({
             name: indicador.nombre,
-            data: data.indicadoresCalculados.map(item => ({
-                x: new Date(item.month).getTime(), // Convertir a timestamp para mejor manejo de fechas
-                y: item[indicador.nombre] || 0
-            }))
+            data: data.indicadoresCalculados.map(item => {
+                // Formatear la fecha correctamente para evitar problemas de zona horaria
+                // Usamos el formato YYYY-MM-DD que viene del backend y lo parseamos manualmente
+                const fechaStr = String(item.month); // Aseguramos que sea string con formato "YYYY-MM-DD"
+                const [year, month, day] = fechaStr.split('-').map((num: string) => parseInt(num, 10));
+                // Crear la fecha formateada directamente sin usar el objeto Date
+                const fechaFormateada = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+                
+                return {
+                    x: fechaFormateada, // Usamos la fecha formateada directamente
+                    y: item[indicador.nombre] || 0
+                };
+            })
         }));
+    };
+    
+    // Obtener las fechas exactas que tienen datos
+    const obtenerFechasExactas = () => {
+        if (!data || !data.indicadoresCalculados) return [];
+        
+        return data.indicadoresCalculados.map(item => {
+            const fecha = new Date(item.month);
+            return `${fecha.getDate().toString().padStart(2, '0')}/${(fecha.getMonth() + 1).toString().padStart(2, '0')}/${fecha.getFullYear()}`;
+        });
     };
 
     // Configuración de opciones para ApexCharts
@@ -182,20 +216,18 @@ export const ApexIndicadoresChart = () => {
                 }
             },
             zoom: {
-                enabled: true,
-                type: 'x', // 'x', 'y', o 'xy'
-                autoScaleYaxis: true
+                enabled: false // Desactivamos el zoom
             },
             toolbar: {
                 show: true,
                 tools: {
                     download: true,
-                    selection: true,
-                    zoom: true,
-                    zoomin: true,
-                    zoomout: true,
-                    pan: true,
-                    reset: true
+                    selection: false,
+                    zoom: false,
+                    zoomin: false,
+                    zoomout: false,
+                    pan: false,
+                    reset: false
                 }
             }
         },
@@ -205,9 +237,26 @@ export const ApexIndicadoresChart = () => {
             width: 2
         },
         xaxis: {
-            type: 'datetime',
+            type: 'category',
+            categories: obtenerFechasExactas(), // Usar exactamente las fechas que tienen datos
+            tickPlacement: 'on',
             labels: {
-                format: 'dd/MM/yyyy'
+                rotate: 0,
+                rotateAlways: false,
+                hideOverlappingLabels: true,
+                style: {
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                },
+                formatter: function(value) {
+                    return value; // Mostramos el valor tal cual viene formateado
+                }
+            },
+            axisBorder: {
+                show: true
+            },
+            axisTicks: {
+                show: true
             },
             title: {
                 text: 'Fecha'
@@ -293,10 +342,7 @@ export const ApexIndicadoresChart = () => {
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h3 className="text-base font-semibold text-gray-800">Indicadores Financieros</h3>
-                        <p className="text-sm text-gray-500 mt-1">Evolución de indicadores clave ({periodoSeleccionado === '1m' ? 'último mes' : 
-                                                                 periodoSeleccionado === '3m' ? 'últimos 3 meses' : 
-                                                                 periodoSeleccionado === '6m' ? 'últimos 6 meses' : 
-                                                                 'último año'})</p>
+                        <p className="text-sm text-gray-500 mt-1">Evolución de indicadores clave ({getDescripcionPeriodoUI(periodoSeleccionado)})</p>
                     </div>
                     
                     <div className="flex items-center space-x-3">

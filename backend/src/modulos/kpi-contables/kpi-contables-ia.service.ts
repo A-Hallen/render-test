@@ -1,6 +1,11 @@
 import { KPIContablesService } from './kpi-contables.service';
 import { OficinaService } from '../oficinas/oficinas.service';
 import { Type } from '@google/genai';
+import { FuzzyMatcher } from '../../utils/fuzzy-matcher';
+import { IndicadoresContablesRepository } from '../indicadores-contables/indicadores-contables.repository';
+import { IndicadorContable } from '../indicadores-contables/interfaces/IndicadorContable.interface';
+import { ObtenerOficinasResponse, OficinasDTO } from 'shared';
+import { OficinasRepository } from '../oficinas/oficinas.repository';
 
 /**
  * Servicio para integrar los KPIs contables con el módulo de IA
@@ -9,11 +14,13 @@ import { Type } from '@google/genai';
  */
 export class KPIContablesIAService {
     private kpiContablesService: KPIContablesService;
-    private oficinaService: OficinaService;
+    private oficinasRepository: OficinasRepository;
+    private indicadoresRepository: IndicadoresContablesRepository;
 
     constructor() {
         this.kpiContablesService = new KPIContablesService();
-        this.oficinaService = new OficinaService();
+        this.oficinasRepository = new OficinasRepository();
+        this.indicadoresRepository = new IndicadoresContablesRepository();
     }
 
     /**
@@ -23,28 +30,18 @@ export class KPIContablesIAService {
     getFunctionDeclaration() {
         return {
             name: 'fetch_kpi_data',
-            description: 'Obtiene datos de KPIs contables para una oficina y rango de fechas específicos. Los KPIs contables son indicadores financieros que miden el desempeño contable de la empresa, el color de los indicadores es irrelevante para el usuario ok?',
+            description: 'Obtiene datos de KPIs contables para una oficina y rango de fechas específicos o para un indicador específico. Los KPIs contables son indicadores financieros que miden el desempeño contable de la empresa.',
             parameters: {
                 type: Type.OBJECT,
                 properties: {
-                    oficina: {
-                        type: Type.STRING,
-                        description: 'Código o nombre de la oficina para la cual obtener los KPIs',
-                    },
-                    fechaInicio: {
-                        type: Type.STRING,
-                        description: 'Fecha de inicio para el rango en formato YYYY-MM-DD',
-                    },
-                    fechaFin: {
-                        type: Type.STRING,
-                        description: 'Fecha de fin para el rango en formato YYYY-MM-DD',
-                    },
-                    promediado: {
-                        type: Type.BOOLEAN,
-                        description: 'Si es true, devuelve los KPIs promediados por periodo. Si es false, devuelve los KPIs por fecha',
-                    }
+                    oficina: { type: Type.STRING, description: 'Código o nombre de la oficina para la cual obtener los KPIs' },
+                    fechaInicio: { type: Type.STRING, description: 'Fecha de inicio para el rango en formato YYYY-MM-DD' },
+                    fechaFin: { type: Type.STRING, description: 'Fecha de fin para el rango en formato YYYY-MM-DD' },
+                    fecha: { type: Type.STRING, description: 'Fecha específica para consultar un indicador en formato YYYY-MM-DD. Si se proporciona, se ignoran fechaInicio y fechaFin' },
+                    indicador: { type: Type.STRING, description: 'Nombre o ID del indicador específico a consultar. Si se proporciona, se consultará solo este indicador' },
+                    promediado: { type: Type.BOOLEAN, description: 'Si es true, devuelve los KPIs promediados por periodo. Si es false, devuelve los KPIs por fecha. Solo aplica cuando no se especifica un indicador' }
                 },
-                required: ['oficina', 'fechaInicio', 'fechaFin'],
+                required: ['oficina'],
             },
         };
     }
@@ -53,7 +50,7 @@ export class KPIContablesIAService {
      * Procesa una llamada de función de IA para obtener datos de KPIs
      * @param args Argumentos de la llamada de función
      * @param message Mensaje original del usuario
-     * @returns Respuesta formateada para la IA
+     * @returns Prompt con los datos de KPIs para la IA
      */
     async processFunctionCall(args: any, message: string): Promise<string> {
         console.log("[KPIContablesIAService] Procesando llamada de función para KPIs contables");
@@ -70,205 +67,185 @@ export class KPIContablesIAService {
             return 'Para obtener datos de KPIs contables, necesito saber la oficina.';
         }
         
-        // Si no se proporcionan fechas, usar fechas automáticas (mes actual)
-        if (!params.fechaInicio || !params.fechaFin) {
-            console.log("[KPIContablesIAService] Usando fechas automáticas");
-            
-            const hoy = new Date();
-            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-            
-            params.fechaInicio = primerDiaMes.toISOString().split('T')[0]; // YYYY-MM-DD
-            params.fechaFin = ultimoDiaMes.toISOString().split('T')[0]; // YYYY-MM-DD
-            
-            console.log(`[KPIContablesIAService] Fechas automáticas: ${params.fechaInicio} a ${params.fechaFin}`);
-        }
-        
         try {
             // Buscar la mejor coincidencia para la oficina ingresada
             const oficinaIngresada = params.oficina;
-            const oficinasDisponibles = await this.obtenerOficinasDisponibles();
+            const oficinasDisponibles = await this.oficinasRepository.obtenerTodas();
+            const nombresOficinasDisponibles = oficinasDisponibles.map((oficina: OficinasDTO) => oficina.nombre);
             
             console.log(`[KPIContablesIAService] Buscando coincidencia para oficina: "${oficinaIngresada}"`);
-            console.log(`[KPIContablesIAService] Oficinas disponibles: ${oficinasDisponibles.join(', ')}`);
+            console.log(`[KPIContablesIAService] Oficinas disponibles: ${nombresOficinasDisponibles.join(', ')}`);
             
-            const oficinaCoincidente = this.encontrarMejorCoincidencia(oficinaIngresada, oficinasDisponibles);
+            const nombreOficinaCoincidente = FuzzyMatcher.encontrarMejorCoincidencia(oficinaIngresada, nombresOficinasDisponibles);
+            const oficinaCoincidente = oficinasDisponibles.find(oficina => oficina.nombre === nombreOficinaCoincidente);
             
             if (!oficinaCoincidente) {
                 return `No se encontró ninguna oficina que coincida con "${oficinaIngresada}". Las oficinas disponibles son: ${oficinasDisponibles.join(', ')}`;
             }
             
-            console.log(`[KPIContablesIAService] Coincidencia de oficina: "${oficinaIngresada}" -> "${oficinaCoincidente}"`);
+            console.log(`[KPIContablesIAService] Coincidencia de oficina: "${oficinaIngresada}" -> "${oficinaCoincidente.nombre}"`);
             
-            // Determinar si se solicitan KPIs promediados o por fecha
-            let resultado;
-            if (params.promediado === true) {
-                console.log("[KPIContablesIAService] Obteniendo KPIs promediados");
-                resultado = await this.kpiContablesService.obtenerPromedioKPIsOficina(
-                    oficinaCoincidente,
-                    params.fechaInicio,
-                    params.fechaFin
+            // Verificar si se está solicitando un indicador específico
+            if (params.indicador) {
+                // Si se solicita un indicador específico, buscar la mejor coincidencia
+                const indicadorIngresado = params.indicador;
+                const indicadoresDisponibles = await this.indicadoresRepository.obtenerTodos();
+                const nombresIndicadores = indicadoresDisponibles.map((ind: IndicadorContable) => ind.nombre);
+                
+                console.log(`[KPIContablesIAService] Buscando coincidencia para indicador: "${indicadorIngresado}"`);
+                console.log(`[KPIContablesIAService] Indicadores disponibles: ${nombresIndicadores.join(', ')}`);
+                
+                const indicadorCoincidente = FuzzyMatcher.encontrarMejorCoincidencia(indicadorIngresado, nombresIndicadores);
+                
+                if (!indicadorCoincidente) {
+                    return `No se encontró ningún indicador que coincida con "${indicadorIngresado}". Los indicadores disponibles son: ${nombresIndicadores.join(', ')}`;
+                }
+                
+                console.log(`[KPIContablesIAService] Coincidencia de indicador: "${indicadorIngresado}" -> "${indicadorCoincidente}"`);
+                
+                // Determinar si la coincidencia es un nombre o un ID
+                let idIndicador: string;
+                let nombreIndicador: string;
+                
+                const indicadorPorNombre = indicadoresDisponibles.find((ind: IndicadorContable) => ind.nombre === indicadorCoincidente);
+                if (indicadorPorNombre) {
+                    idIndicador = indicadorPorNombre.id;
+                    nombreIndicador = indicadorPorNombre.nombre;
+                } else {
+                    // Si no se encuentra por nombre, buscar por ID
+                    const indicadorPorId = indicadoresDisponibles.find((ind: IndicadorContable) => ind.id === indicadorCoincidente);
+                    if (indicadorPorId) {
+                        idIndicador = indicadorPorId.id;
+                        nombreIndicador = indicadorPorId.nombre;
+                    } else {
+                        return `Error al identificar el indicador "${indicadorCoincidente}".`;
+                    }
+                }
+                
+                // Determinar la fecha a utilizar
+                let fechaConsulta = params.fecha;
+                
+                // Si no se proporciona una fecha específica, usar la fecha actual
+                if (!fechaConsulta) {
+                    if (params.fechaInicio && params.fechaFin) {
+                        // Si hay un rango de fechas, usar la fecha final
+                        fechaConsulta = params.fechaFin;
+                    } else {
+                        // Usar la fecha actual formateada como YYYY-MM-DD
+                        const hoy = new Date();
+                        fechaConsulta = hoy.toISOString().split('T')[0];
+                    }
+                }
+                
+                console.log(`[KPIContablesIAService] Consultando indicador específico: ${nombreIndicador} (${idIndicador}) para la fecha ${fechaConsulta}`);
+                
+                // Obtener el KPI específico
+                const resultadoKPI = await this.kpiContablesService.obtenerKPIEspecifico(
+                    oficinaCoincidente.codigo,
+                    idIndicador.toString(),
+                    fechaConsulta
                 );
+                
+                // Generar prompt para la IA con los datos obtenidos
+                const prompt = `
+                    He obtenido los siguientes datos del indicador financiero solicitado:
+                    
+                    Oficina: ${params.oficina} (${oficinaCoincidente})
+                    Indicador: ${nombreIndicador} (${idIndicador})
+                    Fecha: ${fechaConsulta}
+                    
+                    Datos del indicador:
+                    ${JSON.stringify(resultadoKPI, null, 2)}
+                    
+                    Por favor, analiza estos datos y presenta una explicación clara y concisa para el usuario, incluyendo:
+                    1. El valor del indicador y su significado
+                    2. Los componentes que forman el cálculo (numerador y denominador)
+                    3. Una interpretación del resultado en el contexto financiero
+                    
+                    Responde a la consulta original del usuario: ${message}
+                `;
+                
+                return prompt;
             } else {
-                console.log("[KPIContablesIAService] Obteniendo KPIs por fecha");
-                resultado = await this.kpiContablesService.obtenerKPIsPorOficinaRangosFecha(
-                    oficinaCoincidente,
-                    params.fechaInicio,
-                    params.fechaFin
-                );
+                // Si no se solicita un indicador específico, proceder con la consulta de todos los KPIs
+                
+                // Si no se proporcionan fechas, usar fechas automáticas (mes actual)
+                if (!params.fechaInicio || !params.fechaFin) {
+                    console.log("[KPIContablesIAService] Usando fechas automáticas");
+                    
+                    const hoy = new Date();
+                    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                    const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+                    
+                    params.fechaInicio = primerDiaMes.toISOString().split('T')[0];
+                    params.fechaFin = ultimoDiaMes.toISOString().split('T')[0];
+                    
+                    console.log(`[KPIContablesIAService] Fechas automáticas: ${params.fechaInicio} a ${params.fechaFin}`);
+                }
+                
+                // Determinar si se solicitan KPIs promediados o por fecha
+                let resultado;
+                if (params.promediado === true) {
+                    console.log("[KPIContablesIAService] Obteniendo KPIs promediados");
+                    resultado = await this.kpiContablesService.obtenerPromedioKPIsOficina(
+                        oficinaCoincidente.codigo,
+                        params.fechaInicio,
+                        params.fechaFin
+                    );
+                } else {
+                    console.log("[KPIContablesIAService] Obteniendo KPIs por fecha");
+                    resultado = await this.kpiContablesService.obtenerKPIsPorOficinaRangosFecha(
+                        oficinaCoincidente.codigo,
+                        params.fechaInicio,
+                        params.fechaFin
+                    );
+                }
+                
+                // Generar prompt para la IA con los datos obtenidos
+                const prompt = `
+                    He obtenido los siguientes datos de KPIs contables:
+                    
+                    Oficina: ${params.oficina} (${oficinaCoincidente})
+                    Periodo: ${params.fechaInicio} a ${params.fechaFin}
+                    Tipo de datos: ${params.promediado ? 'Promediados por periodo' : 'Detallados por fecha'}
+                    
+                    Datos de KPIs:
+                    ${JSON.stringify(resultado, null, 2)}
+                    
+                    Por favor, analiza estos datos y presenta un resumen claro y conciso para el usuario, incluyendo:
+                    1. Los indicadores más relevantes y sus valores
+                    2. Tendencias observadas en el periodo analizado
+                    3. Recomendaciones basadas en los datos financieros
+                    4. Cualquier área que requiera atención especial
+                    
+                    Responde a la consulta original del usuario: ${message}
+                `;
+                
+                return prompt;
             }
-            
-            // Generar prompt para la IA con los datos obtenidos
-            const prompt = `
-                He obtenido los siguientes datos de KPIs contables:
-                
-                Oficina: ${params.oficina}
-                Periodo: ${params.fechaInicio} a ${params.fechaFin}
-                ${params.promediado ? 'KPIs promediados por periodo' : 'KPIs por fecha'}
-                
-                Datos de los KPIs:
-                ${JSON.stringify(resultado, null, 2)}
-                
-                Por favor, analiza estos datos y presenta un resumen claro y conciso para el usuario, destacando:
-                1. Los indicadores más relevantes y su desempeño
-                2. Tendencias observadas en el periodo analizado
-                3. Recomendaciones basadas en los datos financieros
-                
-                Responde a la consulta original del usuario: ${message}
-            `;
-            
-            return prompt;
-        } catch (error: any) {
-            console.error("[KPIContablesIAService] Error al procesar KPIs:", error);
-            
-            // Manejar específicamente el error de sobrecarga del modelo
-            if (error.message && (
-                error.message.includes("The model is overloaded") ||
-                error.message.includes("503 Service Unavailable")
-            )) {
-                return "Lo siento, el servicio de inteligencia artificial está experimentando alta demanda en este momento. " +
-                       "Por favor, espera unos minutos e intenta nuevamente. Este es un problema temporal del servicio.";
-            }
-            
-            return `Ocurrió un error al obtener los datos de KPIs contables: ${error.message}. Por favor, verifica los parámetros e intenta nuevamente.`;
+        } catch (error) {
+            console.error('[KPIContablesIAService] Error al procesar la llamada de función:', error);
+            return `Lo siento, ocurrió un error al procesar la consulta de KPIs contables: ${error instanceof Error ? error.message : 'Error desconocido'}`;
         }
     }
-    
+
     /**
      * Obtiene la lista de oficinas disponibles en el sistema utilizando el servicio existente
      * @returns Array con los nombres de las oficinas
      */
     private async obtenerOficinasDisponibles(): Promise<string[]> {
         try {
-            // Utilizar el servicio de oficinas existente
-            const respuesta = await this.oficinaService.obtenerTodas();
+            const oficinas = await this.oficinasRepository.obtenerTodas();
             
-            if (!respuesta || !respuesta.oficinas) {
-                return [];
-            }
+            // Extraer códigos y nombres para la búsqueda fuzzy
+            const codigosOficinas = oficinas.map((oficina: OficinasDTO) => oficina.codigo).filter(Boolean) as string[];
+            const nombresOficinas = oficinas.map((oficina: OficinasDTO) => oficina.nombre).filter(Boolean) as string[];
             
-            // Extraer los nombres/códigos de las oficinas
-            return respuesta.oficinas.map(oficina => oficina.codigo || oficina.nombre);
+            // Combinar códigos y nombres para tener todas las opciones posibles
+            return [...codigosOficinas, ...nombresOficinas];
         } catch (error) {
-            console.error('[KPIContablesIAService] Error al obtener oficinas disponibles:', error);
+            console.error('[KPIContablesIAService] Error al obtener oficinas:', error);
             return [];
         }
-    }
-    
-    /**
-     * Encuentra la mejor coincidencia entre un texto de entrada y una lista de opciones
-     * @param entrada Texto ingresado por el usuario
-     * @param opciones Lista de opciones válidas
-     * @returns La mejor coincidencia o undefined si no hay coincidencias aceptables
-     */
-    private encontrarMejorCoincidencia(entrada: string, opciones: string[]): string | undefined {
-        if (!entrada || opciones.length === 0) {
-            return undefined;
-        }
-        
-        // Normalizar la entrada (minúsculas, sin acentos, etc.)
-        const entradaNormalizada = this.normalizarTexto(entrada);
-        
-        // Buscar coincidencia exacta primero (después de normalizar)
-        const coincidenciaExacta = opciones.find(opcion => 
-            this.normalizarTexto(opcion) === entradaNormalizada
-        );
-        
-        if (coincidenciaExacta) {
-            return coincidenciaExacta;
-        }
-        
-        // Buscar coincidencia parcial (si la entrada está contenida en alguna opción o viceversa)
-        const coincidenciaParcial = opciones.find(opcion => {
-            const opcionNormalizada = this.normalizarTexto(opcion);
-            return opcionNormalizada.includes(entradaNormalizada) || 
-                   entradaNormalizada.includes(opcionNormalizada);
-        });
-        
-        if (coincidenciaParcial) {
-            return coincidenciaParcial;
-        }
-        
-        // Calcular similitud usando distancia de Levenshtein
-        let mejorCoincidencia: string | undefined;
-        let mejorPuntuacion = Number.MAX_VALUE;
-        
-        for (const opcion of opciones) {
-            const opcionNormalizada = this.normalizarTexto(opcion);
-            const distancia = this.calcularDistanciaLevenshtein(entradaNormalizada, opcionNormalizada);
-            const umbralMaximo = Math.max(entradaNormalizada.length, opcionNormalizada.length) * 0.4; // 40% de diferencia máxima
-            
-            if (distancia < mejorPuntuacion && distancia <= umbralMaximo) {
-                mejorPuntuacion = distancia;
-                mejorCoincidencia = opcion;
-            }
-        }
-        
-        return mejorCoincidencia;
-    }
-    
-    /**
-     * Normaliza un texto para comparaciones (minúsculas, sin acentos, etc.)
-     */
-    private normalizarTexto(texto: string): string {
-        return texto
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
-            .replace(/[^a-z0-9]/g, "");     // Eliminar caracteres especiales
-    }
-    
-    /**
-     * Calcula la distancia de Levenshtein entre dos cadenas
-     * (número mínimo de operaciones para transformar una cadena en otra)
-     */
-    private calcularDistanciaLevenshtein(a: string, b: string): number {
-        if (a.length === 0) return b.length;
-        if (b.length === 0) return a.length;
-        
-        const matrix: number[][] = [];
-        
-        // Inicializar la primera fila y columna
-        for (let i = 0; i <= b.length; i++) {
-            matrix[i] = [i];
-        }
-        
-        for (let j = 0; j <= a.length; j++) {
-            matrix[0][j] = j;
-        }
-        
-        // Rellenar la matriz
-        for (let i = 1; i <= b.length; i++) {
-            for (let j = 1; j <= a.length; j++) {
-                const costo = a[j - 1] === b[i - 1] ? 0 : 1;
-                matrix[i][j] = Math.min(
-                    matrix[i - 1][j] + 1,      // Eliminación
-                    matrix[i][j - 1] + 1,      // Inserción
-                    matrix[i - 1][j - 1] + costo // Sustitución
-                );
-            }
-        }
-        
-        return matrix[b.length][a.length];
     }
 }

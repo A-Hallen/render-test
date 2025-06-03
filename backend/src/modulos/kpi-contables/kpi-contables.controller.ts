@@ -89,4 +89,48 @@ export class KPIContablesController {
             return;
         }
     }
+
+    /**
+     * Obtiene un KPI específico para una oficina en una fecha determinada
+     * @param req Request con parámetros de consulta (oficina, idIndicador, fecha)
+     * @param res Response para enviar el KPI
+     */
+    async obtenerKPIEspecifico(req: Request, res: Response): Promise<void> {
+        try {
+            const oficina = req.query.oficina as string;
+            const idIndicador = req.query.idIndicador as string;
+            const fecha = req.query.fecha as string;
+            
+            // Validar parámetros requeridos
+            if (!oficina || !idIndicador || !fecha) {
+                res.status(400).json({ 
+                    mensaje: 'Los parámetros oficina, idIndicador y fecha son obligatorios' 
+                });
+                return;
+            }
+            
+            console.log(`[Controller] Obteniendo KPI específico para oficina: ${oficina}, indicador: ${idIndicador}, fecha: ${fecha}`);
+            
+            const kpi = await this.kpiContablesService.obtenerKPIEspecifico(
+                oficina,
+                idIndicador,
+                fecha
+            );
+            
+            if (!kpi) {
+                res.status(404).json({
+                    mensaje: 'No se encontró el KPI solicitado para los parámetros especificados'
+                });
+                return;
+            }
+            
+            res.status(200).json(kpi);
+        } catch (error: any) {
+            console.error("[Controller] Error al obtener KPI específico:", error);
+            res.status(500).json({ 
+                mensaje: 'Error al obtener el KPI específico', 
+                error: error.message 
+            });
+        }
+    }
 }

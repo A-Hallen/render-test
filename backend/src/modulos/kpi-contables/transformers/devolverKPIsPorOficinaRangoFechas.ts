@@ -99,16 +99,18 @@ export const devolverKPIsPorOficinaRangoFechas = async (
       
       // Iterar por los últimos días de cada mes en el rango
       while (fechaActual <= fechaFinObj) {
-        // Solo agregar si es el último día del mes
-        if (esUltimoDiaDelMes(fechaActual)) {
-          fechasStr.push(formatearFecha(fechaActual));
-          fechasDate.push(new Date(fechaActual));
+        // Siempre establecer la fecha al último día del mes actual
+        const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
+        
+        // Agregar la fecha si está dentro del rango
+        if (ultimoDiaMes <= fechaFinObj) {
+          fechasStr.push(formatearFecha(ultimoDiaMes));
+          fechasDate.push(new Date(ultimoDiaMes));
         }
         
-        // Avanzar al último día del siguiente mes
+        // Avanzar al siguiente mes
         fechaActual.setMonth(fechaActual.getMonth() + 1);
-        // Asegurar que sea el último día del mes
-        fechaActual.setDate(new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0).getDate());
+        fechaActual.setDate(1); // Establecer al primer día del mes para evitar problemas con meses de diferentes longitudes
       }
       
       console.log(`[devolverKPIsPorOficinaRangoFechas] Consultando ${fechasDate.length} fechas de fin de mes para la oficina ${oficina}`);
