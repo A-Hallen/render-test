@@ -51,6 +51,37 @@ export class NotificationRoutes {
       '/test',
       this.notificationController.testNotification.bind(this.notificationController)
     );
+
+    // Rutas para la persistencia de notificaciones
+    this.router.get(
+      '/users/:userId/notifications',
+      this.authMiddleware.verifyToken,
+      this.notificationController.getUserNotifications.bind(this.notificationController)
+    );
+
+    this.router.patch(
+      '/users/:userId/notifications/:notificationId/read',
+      this.authMiddleware.verifyToken,
+      this.notificationController.markNotificationAsRead.bind(this.notificationController)
+    );
+
+    this.router.patch(
+      '/users/:userId/notifications/read-all',
+      this.authMiddleware.verifyToken,
+      this.notificationController.markAllNotificationsAsRead.bind(this.notificationController)
+    );
+
+    this.router.delete(
+      '/users/:userId/notifications/:notificationId',
+      this.authMiddleware.verifyToken,
+      this.notificationController.deleteNotification.bind(this.notificationController)
+    );
+
+    this.router.delete(
+      '/users/:userId/notifications',
+      this.authMiddleware.verifyToken,
+      this.notificationController.deleteAllUserNotifications.bind(this.notificationController)
+    );
   }
 
   public getRouter(): Router {

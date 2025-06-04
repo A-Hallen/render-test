@@ -5,10 +5,11 @@ import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext';
 // @ts-ignore - Ignorar error de tipos para uuid
 import { v4 as uuidv4 } from 'uuid';
-import type { Notification, NotificationPayload } from '../types/notification';
+import { NotificationPayload, NotificationMeta } from '../types/notification';
+import NotificationService from '../services/NotificationService';
 
 interface NotificationContextType {
-  notifications: Notification[];
+  notifications: NotificationMeta[];
   addNotification: (notification: NotificationPayload) => void;
   markNotificationAsRead: (id: string) => void;
   clearAllNotifications: () => void;
@@ -18,6 +19,7 @@ interface NotificationContextType {
   notificationsEnabled: boolean;
   requestNotificationPermission: () => Promise<boolean>;
   deviceId: string | null;
+  markAllNotificationsAsRead: () => void;
 }
 
 export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -26,7 +28,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Obtener el usuario actual y estado de autenticación
   const { user, isAuthenticated } = useAuth();
   // Estado para las notificaciones
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationMeta[]>([
+  ]);
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
@@ -164,7 +167,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   
   // Función para añadir una nueva notificación
   const addNotification = (notification: NotificationPayload) => {
-    const newNotification: Notification = {
+    const newNotification: NotificationMeta = {
       ...notification,
       id: Date.now().toString(),
       timestamp: Date.now(),
@@ -240,17 +243,54 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
   
   // Marcar una notificación como leída
-  const markNotificationAsRead = (id: string) => {
+  const markNotificationAsRead = async (id: string) => {
+    // Buscar la notificación para obtener el userId
+    const notification = notifications.find(n => n.id === id);
+    if (!notification) return;
+    
+    // Actualizar el estado local
     setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
+    
+    // Si el usuario está autenticado, actualizar en el backend
+    if (isAuthenticated && user && notification.userId) {
+      try {
+        await NotificationService.markNotificationAsRead(notification.userId, id);
+      } catch (error) {
+        console.error('Error al marcar notificación como leída en el backend:', error);
+      }
+    }
   };
   
   // Limpiar todas las notificaciones
-  const clearAllNotifications = () => {
+  const clearAllNotifications = async () => {
+    // Actualizar estado local
     setNotifications([]);
+    
+    // Si el usuario está autenticado, eliminar todas las notificaciones en el backend
+    if (isAuthenticated && user) {
+      try {
+        await NotificationService.deleteAllNotifications(user.uid);
+      } catch (error) {
+        console.error('Error al eliminar todas las notificaciones en el backend:', error);
+      }
+    }
+  };
+  
+  // Marcar todas las notificaciones como leídas
+  const markAllNotificationsAsRead = async () => {
+    // Actualizar estado local
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    
+    // Si el usuario está autenticado, marcar todas como leídas en el backend
+    if (isAuthenticated && user) {
+      try {
+        await NotificationService.markAllNotificationsAsRead(user.uid);
+      } catch (error) {
+        console.error('Error al marcar todas las notificaciones como leídas en el backend:', error);
+      }
+    }
   };
   
   // Mostrar/ocultar el centro de notificaciones
@@ -258,16 +298,29 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setShowNotifications(state);
   };
   
-  // Efecto para recuperar el token FCM del localStorage al cargar
+  // Efecto para recuperar el token FCM del localStorage al cargar y cargar notificaciones del usuario
   useEffect(() => {
-    //TODO(Eliminar esta linea, esto es solo para pruebas):
-    localStorage.setItem('fcmToken', '')
     const savedToken = localStorage.getItem('fcmToken');
     if (savedToken) {
       setFcmToken(savedToken);
-      setNotificationsEnabled(false);
+      setNotificationsEnabled(true);
     }
-  }, []);
+    
+    // Cargar notificaciones del usuario si está autenticado
+    if (isAuthenticated && user) {
+      loadUserNotifications(user.uid);
+    }
+  }, [isAuthenticated, user]);
+  
+  // Función para cargar notificaciones del usuario desde el backend
+  const loadUserNotifications = async (userId: string) => {
+    try {
+      const userNotifications = await NotificationService.getUserNotifications(userId);
+      setNotifications(userNotifications);
+    } catch (error) {
+      console.error('Error al cargar notificaciones del usuario:', error);
+    }
+  };
   
   // Efecto para enviar el token al backend cuando el usuario se autentica
   useEffect(() => {
@@ -318,7 +371,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         fcmToken,
         notificationsEnabled,
         requestNotificationPermission,
-        deviceId
+        deviceId,
+        markAllNotificationsAsRead
       }}
     >
       {children}

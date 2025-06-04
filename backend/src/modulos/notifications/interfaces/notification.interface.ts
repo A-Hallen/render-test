@@ -17,6 +17,7 @@ export interface NotificationPayload {
   type?: 'info' | 'success' | 'warning' | 'error';
   data?: Record<string, string>;
   imageUrl?: string;
+  userId?: string;
 }
 
 export interface SendNotificationResult {
@@ -25,4 +26,26 @@ export interface SendNotificationResult {
   error?: string;
   tokensCount?: number;
   failedTokens?: string[];
+}
+
+/**
+ * Notificación persistente con metadatos adicionales
+ */
+export interface StoredNotification extends NotificationPayload {
+  id?: string;
+  timestamp: number;
+  read: boolean;
+  readAt?: number;
+  userId: string;
+}
+
+/**
+ * Filtros para consultar notificaciones
+ */
+export interface NotificationFilters {
+  userId?: string;
+  read?: boolean;
+  startDate?: number;
+  endDate?: number;
+  limit?: number;
 }

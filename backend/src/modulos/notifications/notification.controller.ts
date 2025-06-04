@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { NotificationService } from './notification.service';
-import { NotificationPayload } from './interfaces/notification.interface';
+import { NotificationPayload, NotificationFilters } from './interfaces/notification.interface';
 import { UserRole } from '../auth/interfaces/user.interface';
 
 export class NotificationController {
@@ -229,6 +229,146 @@ export class NotificationController {
       console.error('Error al enviar notificación de prueba:', error);
       res.status(500).json({
         message: error.message || 'Error al enviar notificación de prueba',
+        code: error.code
+      });
+    }
+  }
+
+  /**
+   * Obtiene las notificaciones de un usuario
+   */
+  async getUserNotifications(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const { read, startDate, endDate, limit } = req.query;
+
+      // Verificar que el usuario autenticado solo pueda ver sus propias notificaciones
+      if (req.user && req.user.uid !== userId && req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ message: 'No autorizado para ver notificaciones de otro usuario' });
+        return;
+      }
+
+      // Preparar filtros
+      const filters: NotificationFilters = { userId };
+      
+      if (read !== undefined) {
+        filters.read = read === 'true';
+      }
+      
+      if (startDate) {
+        filters.startDate = Number(startDate);
+      }
+      
+      if (endDate) {
+        filters.endDate = Number(endDate);
+      }
+      
+      if (limit) {
+        filters.limit = Number(limit);
+      }
+
+      const notifications = await this.notificationService.getUserNotifications(userId, filters);
+      res.status(200).json(notifications);
+    } catch (error: any) {
+      console.error('Error al obtener notificaciones del usuario:', error);
+      res.status(500).json({
+        message: error.message || 'Error al obtener notificaciones',
+        code: error.code
+      });
+    }
+  }
+
+  /**
+   * Marca una notificación como leída
+   */
+  async markNotificationAsRead(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, notificationId } = req.params;
+
+      // Verificar que el usuario autenticado solo pueda modificar sus propias notificaciones
+      if (req.user && req.user.uid !== userId && req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ message: 'No autorizado para modificar notificaciones de otro usuario' });
+        return;
+      }
+
+      const notification = await this.notificationService.markNotificationAsRead(notificationId, userId);
+      res.status(200).json(notification);
+    } catch (error: any) {
+      console.error('Error al marcar notificación como leída:', error);
+      res.status(error.message.includes('No autorizado') ? 403 : 500).json({
+        message: error.message || 'Error al marcar notificación como leída',
+        code: error.code
+      });
+    }
+  }
+
+  /**
+   * Marca todas las notificaciones de un usuario como leídas
+   */
+  async markAllNotificationsAsRead(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      // Verificar que el usuario autenticado solo pueda modificar sus propias notificaciones
+      if (req.user && req.user.uid !== userId && req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ message: 'No autorizado para modificar notificaciones de otro usuario' });
+        return;
+      }
+
+      const count = await this.notificationService.markAllNotificationsAsRead(userId);
+      res.status(200).json({ count });
+    } catch (error: any) {
+      console.error('Error al marcar todas las notificaciones como leídas:', error);
+      res.status(500).json({
+        message: error.message || 'Error al marcar todas las notificaciones como leídas',
+        code: error.code
+      });
+    }
+  }
+
+  /**
+   * Elimina una notificación
+   */
+  async deleteNotification(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, notificationId } = req.params;
+
+      // Verificar que el usuario autenticado solo pueda eliminar sus propias notificaciones
+      if (req.user && req.user.uid !== userId && req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ message: 'No autorizado para eliminar notificaciones de otro usuario' });
+        return;
+      }
+
+      const success = await this.notificationService.deleteNotification(notificationId, userId);
+      res.status(success ? 200 : 404).json({ success });
+    } catch (error: any) {
+      console.error('Error al eliminar notificación:', error);
+      res.status(error.message.includes('No autorizado') ? 403 : 500).json({
+        message: error.message || 'Error al eliminar notificación',
+        code: error.code
+      });
+    }
+  }
+
+  /**
+   * Elimina todas las notificaciones de un usuario
+   */
+  async deleteAllUserNotifications(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      // Verificar que el usuario autenticado solo pueda eliminar sus propias notificaciones
+      if (req.user && req.user.uid !== userId && req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ message: 'No autorizado para eliminar notificaciones de otro usuario' });
+        return;
+      }
+
+      const count = await this.notificationService.deleteAllUserNotifications(userId);
+      res.status(200).json({ count });
+    } catch (error: any) {
+      console.error('Error al eliminar todas las notificaciones del usuario:', error);
+      res.status(500).json({
+        message: error.message || 'Error al eliminar todas las notificaciones',
         code: error.code
       });
     }

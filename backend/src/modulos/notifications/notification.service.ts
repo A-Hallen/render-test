@@ -1,6 +1,6 @@
 import * as admin from 'firebase-admin';
 import { NotificationRepository } from './notification.repository';
-import { FCMToken, NotificationPayload, SendNotificationResult } from './interfaces/notification.interface';
+import { FCMToken, NotificationPayload, SendNotificationResult, StoredNotification, NotificationFilters } from './interfaces/notification.interface';
 
 export class NotificationService {
   private notificationRepository: NotificationRepository;
@@ -48,7 +48,7 @@ export class NotificationService {
   }
 
   /**
-   * Envía una notificación a un usuario específico
+   * Envía una notificación a un usuario específico y la guarda en la base de datos
    * @param userId ID del usuario
    * @param notification Datos de la notificación
    * @returns Resultado del envío
@@ -99,6 +99,13 @@ export class NotificationService {
         }
       };
 
+      // Guardar la notificación en la base de datos
+      const notificationWithUserId = {
+        ...notification,
+        userId
+      };
+      await this.notificationRepository.saveNotification(notificationWithUserId);
+      
       // Enviar la notificación
       const response = await this.messaging.sendEachForMulticast(message);
 
@@ -238,6 +245,83 @@ export class NotificationService {
       );
     } catch (error) {
       console.error('Error al manejar tokens fallidos:', error);
+    }
+  }
+
+  /**
+   * Obtiene las notificaciones de un usuario
+   * @param userId ID del usuario
+   * @param filters Filtros opcionales
+   * @returns Lista de notificaciones
+   */
+  async getUserNotifications(userId: string, filters: Partial<NotificationFilters> = {}): Promise<StoredNotification[]> {
+    try {
+      const notificationFilters: NotificationFilters = {
+        userId,
+        ...filters
+      };
+      return await this.notificationRepository.getUserNotifications(notificationFilters);
+    } catch (error) {
+      console.error('Error en servicio al obtener notificaciones del usuario:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marca una notificación como leída
+   * @param notificationId ID de la notificación
+   * @param userId ID del usuario
+   * @returns La notificación actualizada
+   */
+  async markNotificationAsRead(notificationId: string, userId: string): Promise<StoredNotification> {
+    try {
+      return await this.notificationRepository.markNotificationAsRead(notificationId, userId);
+    } catch (error) {
+      console.error('Error en servicio al marcar notificación como leída:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marca todas las notificaciones de un usuario como leídas
+   * @param userId ID del usuario
+   * @returns Número de notificaciones actualizadas
+   */
+  async markAllNotificationsAsRead(userId: string): Promise<number> {
+    try {
+      return await this.notificationRepository.markAllNotificationsAsRead(userId);
+    } catch (error) {
+      console.error('Error en servicio al marcar todas las notificaciones como leídas:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Elimina una notificación
+   * @param notificationId ID de la notificación
+   * @param userId ID del usuario
+   * @returns true si se eliminó correctamente
+   */
+  async deleteNotification(notificationId: string, userId: string): Promise<boolean> {
+    try {
+      return await this.notificationRepository.deleteNotification(notificationId, userId);
+    } catch (error) {
+      console.error('Error en servicio al eliminar notificación:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Elimina todas las notificaciones de un usuario
+   * @param userId ID del usuario
+   * @returns Número de notificaciones eliminadas
+   */
+  async deleteAllUserNotifications(userId: string): Promise<number> {
+    try {
+      return await this.notificationRepository.deleteAllUserNotifications(userId);
+    } catch (error) {
+      console.error('Error en servicio al eliminar todas las notificaciones del usuario:', error);
+      throw error;
     }
   }
 }

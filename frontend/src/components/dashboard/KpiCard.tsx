@@ -73,7 +73,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         <div className="mt-3 flex items-center">
           {getChangeIcon()}
           <span className={`text-sm font-medium ${getChangeColor()}`}>
-            {Math.abs(change)}%
+            {Math.abs(change).toFixed(2)}%
           </span>
           <span className="ml-1 text-xs text-gray-500">
             {changeLabel || 'vs último período'}

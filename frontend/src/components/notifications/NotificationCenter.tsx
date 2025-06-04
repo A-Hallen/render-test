@@ -13,7 +13,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
     markNotificationAsRead, 
     clearAllNotifications, 
     notificationsEnabled, 
-    requestNotificationPermission 
+    requestNotificationPermission,
+    markAllNotificationsAsRead
   } = useNotification();
   
   if (!isOpen) return null;
@@ -93,6 +94,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
             className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"
           >
             Activar notificaciones
+          </button>
+        )}
+        {notifications.length > 0 && notifications.some(n => !n.read) && (
+          <button 
+            onClick={markAllNotificationsAsRead}
+            className="w-full py-2 px-4 bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm font-medium rounded-md"
+          >
+            Marcar todas como leídas
           </button>
         )}
         <button 

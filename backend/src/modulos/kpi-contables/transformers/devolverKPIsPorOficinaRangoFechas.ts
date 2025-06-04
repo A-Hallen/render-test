@@ -3,6 +3,7 @@ import { SaldosRepository } from "../../saldosContables/saldos.repository";
 import { KPICalculado } from "../interfaces/KPICalculado.interface";
 import { calcularKPIContable } from "./calcularKPIContable";
 import { SaldosContables } from "../../saldosContables/saldos.model";
+import { Component } from "shared/src/types/indicadores.types";
 
 // Extender la interfaz IndicadorContable para incluir los campos necesarios para el cálculo
 interface IndicadorContableExtendido extends IndicadorContable {
@@ -10,6 +11,43 @@ interface IndicadorContableExtendido extends IndicadorContable {
   denominador: any;
   numeradorAbsoluto: boolean;
   denominadorAbsoluto: boolean;
+}
+
+/**
+ * Extrae todos los códigos de cuentas contables únicos de los indicadores
+ * @param indicadores Lista de indicadores configurados
+ * @returns Array de códigos de cuentas contables únicos
+ */
+function extraerCodigosCuentasDeIndicadores(indicadores: IndicadorContable[]): string[] {
+  const codigosCuentas = new Set<string>();
+  
+  indicadores.forEach(indicador => {
+    // Extraer cuentas del numerador
+    if (indicador.numerador && indicador.numerador.componentes) {
+      indicador.numerador.componentes.forEach(comp => {
+        if (comp.cuentas && Array.isArray(comp.cuentas)) {
+          comp.cuentas.forEach(cuenta => {
+            // Mantener como string
+            codigosCuentas.add(cuenta);
+          });
+        }
+      });
+    }
+    
+    // Extraer cuentas del denominador
+    if (indicador.denominador && indicador.denominador.componentes) {
+      indicador.denominador.componentes.forEach(comp => {
+        if (comp.cuentas && Array.isArray(comp.cuentas)) {
+          comp.cuentas.forEach(cuenta => {
+            // Mantener como string
+            codigosCuentas.add(cuenta);
+          });
+        }
+      });
+    }
+  });
+  
+  return Array.from(codigosCuentas);
 }
 
 // Definir la interfaz para el cálculo de KPI
@@ -115,8 +153,18 @@ export const devolverKPIsPorOficinaRangoFechas = async (
       
       console.log(`[devolverKPIsPorOficinaRangoFechas] Consultando ${fechasDate.length} fechas de fin de mes para la oficina ${oficina}`);
       console.log("fechas", fechasStr);
-      // Obtener saldos desde el repositorio
-      saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechasDate);
+      
+      // OPTIMIZACIÓN: Extraer todos los códigos de cuentas contables necesarios de los indicadores
+      const codigosCuentasNecesarias = extraerCodigosCuentasDeIndicadores(indicadores);
+      console.log(`[devolverKPIsPorOficinaRangoFechas] Filtrando por ${codigosCuentasNecesarias.length} códigos de cuentas contables`);
+      
+      // Obtener saldos desde el repositorio, filtrando por cuentas contables necesarias
+      if (codigosCuentasNecesarias.length > 0) {
+        saldos = await saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(oficina, fechasDate, codigosCuentasNecesarias);
+      } else {
+        // Si no hay cuentas específicas, usar el método original
+        saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechasDate);
+      }
       console.log(`[devolverKPIsPorOficinaRangoFechas] Saldos extraídos: ${saldos.length}`);
     } catch (error) {
       console.error(`[devolverKPIsPorOficinaRangoFechas] Error al obtener saldos: ${error}`);

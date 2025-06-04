@@ -1,9 +1,6 @@
 /**
- * Tipos para el sistema de notificaciones
- * Importados desde los tipos compartidos
+ * Tipos compartidos para el sistema de notificaciones
  */
-
-// Definimos directamente los tipos en lugar de importarlos para evitar problemas de ruta
 
 /**
  * Payload de notificación
@@ -52,5 +49,3 @@ export interface NotificationFilters {
   endDate?: number;
   limit?: number;
 }
-
-// Los tipos ya están definidos arriba
