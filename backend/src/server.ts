@@ -4,6 +4,7 @@ import iaRoutes from './modulos/ia/ia.routes';
 import reporteContabilidadRoutes from './modulos/reportes/contabilidad/reporte-contabilidad.routes';
 import configuracionReportesContabilidadRoutes from './modulos/configuracion-reportes/contabilidad/configuracion-reportes-contabilidad.routes';
 import { AuthRoutes } from './modulos/auth';
+import { NotificationRoutes } from './modulos/notifications';
 import oficinasRoutes from './modulos/oficinas/oficinas.routes';
 import indicadoresContablesRoutes from './modulos/indicadores-contables/indicadores-contables.routes';
 import kpiContablesRoutes from './modulos/kpi-contables/kpi-contables.routes';
@@ -18,14 +19,16 @@ import './config/firebase.config';
 // Middleware para parsear JSON
 app.use(express.json());
 
-// Inicializar rutas de autenticación
+// Inicializar rutas de autenticación y notificaciones
 const authRoutes = new AuthRoutes();
+const notificationRoutes = new NotificationRoutes();
 
 // Usar las rutas de indicadores
 app.use('/api/configuracion-reportes/contabilidad', configuracionReportesContabilidadRoutes)
 app.use('/api/reportes/contabilidad', reporteContabilidadRoutes);
 app.use('/api/oficinas', oficinasRoutes);
 app.use('/api/auth', authRoutes.getRouter());
+app.use('/api/notifications', notificationRoutes.getRouter()); // Las rutas de notificaciones ya incluyen sus propios prefijos
 // Usar las rutas de indicadores y KPIs
 // IMPORTANTE: Las rutas más específicas deben ir primero
 app.use('/api/indicadores-contables', indicadoresContablesRoutes);

@@ -14,7 +14,8 @@ import {
   Users,
   CreditCard,
   Banknote,
-  Box
+  Box,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
@@ -46,6 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
     { name: 'Calendario', icon: <Calendar size={20} />, path: '/calendar' },
     // Mostrar enlace de sincronización solo para administradores
     ...(user?.role === UserRole.ADMIN ? [{ name: 'Sincronización', icon: <Database size={20} />, path: '/sincronizacion' }] : []),
+    // Añadir enlace a la página de prueba de notificaciones
+    ...(user?.role === UserRole.ADMIN ? [{ name: 'Prueba Notificaciones', icon: <Bell size={20} />, path: '/notifications-test' }] : []),
     { name: 'Configuración', icon: <Settings size={20} />, path: '/settings' },
   ];
   

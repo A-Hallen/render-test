@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Bell, Check, AlertCircle, Info } from 'lucide-react';
+import { X, Bell, Check, AlertCircle, Info, BellOff, AlertTriangle } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 
 interface NotificationCenterProps {
@@ -8,18 +8,25 @@ interface NotificationCenterProps {
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
-  const { notifications, markAsRead, clearAll } = useNotification();
+  const { 
+    notifications, 
+    markNotificationAsRead, 
+    clearAllNotifications, 
+    notificationsEnabled, 
+    requestNotificationPermission 
+  } = useNotification();
   
   if (!isOpen) return null;
   
-  const getIcon = (type: string) => {
+  const getIcon = (type?: string) => {
     switch (type) {
       case 'success':
         return <Check className="text-green-500" size={18} />;
       case 'error':
         return <AlertCircle className="text-red-500" size={18} />;
       case 'warning':
-        return <AlertCircle className="text-yellow-500" size={18} />;
+        return <AlertTriangle className="text-amber-500" size={18} />;
+      case 'info':
       default:
         return <Info className="text-blue-500" size={18} />;
     }
@@ -29,7 +36,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
     <div className="fixed inset-y-0 right-0 w-80 md:w-96 bg-white shadow-lg z-50 flex flex-col">
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Bell size={20} />
+          {notificationsEnabled ? <Bell size={20} /> : <BellOff size={20} className="text-gray-400" />}
           <h2 className="text-lg font-semibold">Notificaciones</h2>
           <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
             {notifications.filter(n => !n.read).length}
@@ -59,17 +66,17 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
                   </div>
                   <div className="ml-3 flex-1">
                     <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                    <p className="mt-1 text-sm text-gray-500">{notification.message}</p>
+                    <p className="mt-1 text-sm text-gray-500">{notification.body}</p>
                     <div className="mt-2 flex items-center justify-between">
-                      <p className="text-xs text-gray-400">{notification.time}</p>
+                      <p className="text-xs text-gray-400">{new Date(notification.timestamp).toLocaleString()}</p>
                       {!notification.read && (
                         <button
-                          onClick={() => markAsRead(notification.id)}
-                          className="text-xs text-blue-600 hover:text-blue-800"
+                          onClick={() => markNotificationAsRead(notification.id)}
                         >
                           Marcar como leída
                         </button>
                       )}
+                      {/* Botón para marcar como leída */}
                     </div>
                   </div>
                 </div>
@@ -79,9 +86,17 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
         )}
       </div>
       
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 space-y-2">
+        {!notificationsEnabled && (
+          <button
+            onClick={() => requestNotificationPermission()}
+            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"
+          >
+            Activar notificaciones
+          </button>
+        )}
         <button 
-          onClick={clearAll}
+          onClick={clearAllNotifications}
           className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium rounded-md"
         >
           Limpiar todas

@@ -29,8 +29,6 @@ const N8nChatWidget: React.FC = () => {
       const savedSettingsStr = localStorage.getItem('n8nChatSettings');
       
       if (!savedSettingsStr) {
-        console.log('No n8n chat settings found in localStorage, using default settings for testing');
-        // Default settings for testing - replace with actual webhook URL when available
         savedSettings = {
           webhookUrl: 'https://example.com/webhook/test',  // This is a placeholder
           mode: 'window',
@@ -119,7 +117,6 @@ const N8nChatWidget: React.FC = () => {
       window.addEventListener('n8n-chat-empty-response', handleEmptyResponse);
       
       setIsInitialized(true);
-      console.log('n8n chat initialized successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       console.error('Error initializing n8n chat:', error);

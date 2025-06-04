@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Analysis } from './pages/Analysis';
@@ -12,6 +13,7 @@ import { Visualizacion3D } from './pages/Visualizacion3D';
 import { Sincronizacion } from './pages/Sincronizacion';
 import { IndicadoresContables } from './pages/IndicadoresContables';
 import Profile from './pages/Profile';
+import { NotificationsTest } from './pages/NotificationsTest';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { DataProvider } from './context/DataContext';
@@ -26,6 +28,13 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <DataProvider>
+            <Toaster position="top-right" toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#fff',
+                color: '#333',
+              },
+            }} />
             <Router>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -43,6 +52,7 @@ function App() {
                   <Route path="/indicadores-contables" element={<IndicadoresContables />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/notifications-test" element={<NotificationsTest />} />
                 </Route>
               </Routes>
             </Router>
