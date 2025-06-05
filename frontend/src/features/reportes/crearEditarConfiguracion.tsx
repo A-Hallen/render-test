@@ -11,6 +11,7 @@ import {
 } from "shared/src/types/reportes.types";
 import { Plus, X, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { obtenerCuentasContables } from "../../services/reportes.service";
 
 export type CrearEditarConfiguracionHandle = {
   openModal: (configuracion?: ConfiguracionReporteDTO) => void;
@@ -110,8 +111,7 @@ export const CrearEditarConfiguracionView = forwardRef<
     const cargarCuentas = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/configuracion-reportes/contabilidad/cuentas");
-        const data = await response.json();
+        const data = await obtenerCuentasContables();
         setCuentas(data.cuentas || []);
       } catch (error) {
         console.error("Error cargando cuentas:", error);

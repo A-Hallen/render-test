@@ -1,6 +1,7 @@
 /**
  * Servicio para obtener información de oficinas
  */
+import { httpClient } from './httpClient';
 
 export interface Oficina {
   codigo: string;
@@ -14,13 +15,7 @@ export class OficinasService {
    */
   static async obtenerOficinas(): Promise<Oficina[]> {
     try {
-      const response = await fetch('/api/oficinas');
-      
-      if (!response.ok) {
-        throw new Error(`Error al obtener oficinas: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      const data = await httpClient.get('/api/oficinas');
       return data.oficinas || [];
     } catch (error) {
       console.error('Error al cargar oficinas:', error);

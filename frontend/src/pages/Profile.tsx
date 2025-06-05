@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
-import { User, UserUpdateData } from '../types/auth';
+import { UserUpdateData } from '../types/auth';
 import toast from 'react-hot-toast';
 import { 
   UserCircle, 
   Mail, 
-  Building, 
   Calendar, 
   Shield, 
   Upload, 
@@ -83,7 +82,7 @@ const Profile: React.FC = () => {
     
     try {
       // Subir imagen al backend, que se encargará de subirla a Firebase Storage
-      const result = await authService.uploadProfileImage(token, file);
+      const result = await authService.uploadProfileImage(file);
       
       // Actualizar URL en el formulario
       if (result.imageUrl) {
@@ -140,7 +139,7 @@ const Profile: React.FC = () => {
       }
 
       // Enviar solicitud de actualización
-      const updatedUser = await authService.updateProfile(token, {
+      const updatedUser = await authService.updateProfile({
         displayName: formData.displayName,
         photoURL: formData.photoURL,
       });
@@ -298,14 +297,6 @@ const Profile: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-500 font-medium">Fecha de registro</p>
                       <p className="text-gray-800">{formatDate(user?.createdAt)}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                    <Building size={20} className="text-blue-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">Organización</p>
-                      <p className="text-gray-800">{user?.organization || 'No especificada'}</p>
                     </div>
                   </div>
                 </div>

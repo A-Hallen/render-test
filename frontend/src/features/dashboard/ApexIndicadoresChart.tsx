@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { IndicadorCalcularPeriodoResponse } from "shared/src/types/indicadores.types";
 import ReactApexChart from 'react-apexcharts';
 import { useOficinas } from "../../context/DataContext";
+import { obtenerIndicadoresPorRango } from '../../services/indicadores.service';
 
 export const ApexIndicadoresChart = () => {
     const [data, setData] = useState<IndicadorCalcularPeriodoResponse | null>(null);
@@ -89,19 +90,9 @@ export const ApexIndicadoresChart = () => {
             setIsLoading(true);
             setError(null);
 
-            console.log("obteniendo inficadores para las fechas", inicio, fin, codigoOficina);
-            
-            // Actualizado para usar la nueva ruta del módulo de KPI contables con la oficina seleccionada
-            const response = await fetch(`/api/kpi-contables/rango-fechas?oficina=${codigoOficina}&fechaInicio=${inicio}&fechaFin=${fin}`);
-            
-            if (!response.ok) {
-                throw new Error(`Error en la respuesta: ${response.status} ${response.statusText}`);
-            }
-            
-            const result = await response.json();
+            // Usar el servicio centralizado para obtener los indicadores
+            const result = await obtenerIndicadoresPorRango(codigoOficina, inicio, fin);
 
-            console.log("result", result);
-            
             if (result.error) {
                 throw new Error(result.error);
             }

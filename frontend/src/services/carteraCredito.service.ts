@@ -1,4 +1,5 @@
 import { CarteraCreditoResponse } from 'shared/src/types/cartera-credito.types';
+import { httpClient } from './httpClient';
 
 /**
  * Servicio para gestionar la cartera de crédito
@@ -10,13 +11,8 @@ export const CarteraCreditoService = {
    */
   async obtenerCarteraCredito(codigoOficina: string = 'CNS'): Promise<CarteraCreditoResponse> {
     try {
-      const response = await fetch(`/api/cartera-credito?oficina=${encodeURIComponent(codigoOficina)}`);
-      
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
-      }
-      
-      return await response.json() as CarteraCreditoResponse;
+      // Usar el cliente HTTP centralizado con manejo automático de tokens
+      return await httpClient.get('/api/cartera-credito', {}, { oficina: codigoOficina });
     } catch (error) {
       console.error('Error al obtener la cartera de crédito:', error);
       // Devolver un objeto con valores predeterminados en caso de error

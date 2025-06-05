@@ -111,6 +111,7 @@ export interface AuthApiResponse {
     [key: string]: any;
   };
   idToken?: string; // Para acceso directo al token
+  refreshToken?: string; // Para acceso directo al refresh token
 }
 
 /**

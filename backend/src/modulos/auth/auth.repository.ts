@@ -437,12 +437,58 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
         success: true,
         message: 'Autenticación exitosa',
         data: response.data,
-        idToken: idToken // Exponer el idToken directamente para facilitar su acceso
+        idToken: idToken, // Exponer el idToken directamente para facilitar su acceso
+        refreshToken: refreshToken // Exponer el refreshToken para renovación de sesión
       };
     } catch (error: any) {
       console.error('Error en autenticación con Firebase:', error.response?.data || error.message);
       
       // Manejar errores específicos de Firebase Auth
+      const errorCode = error.response?.data?.error?.message || 'auth/unknown-error';
+      const errorMessage = this.getFirebaseAuthErrorMessage(errorCode);
+      
+      return {
+        success: false,
+        code: errorCode,
+        message: errorMessage
+      };
+    }
+  }
+  
+  /**
+   * Renueva un token de acceso usando un refresh token
+   * @param refreshToken Token de actualización
+   * @returns Nuevo token de acceso y refresh token
+   */
+  async refreshAccessToken(refreshToken: string): Promise<AuthApiResponse> {
+    try {
+      if (!this.FIREBASE_API_KEY) {
+        throw new Error('FIREBASE_API_KEY no está configurada');
+      }
+
+      // Usar la API REST de Firebase para renovar el token
+      const response = await axios.post(
+        `https://securetoken.googleapis.com/v1/token?key=${this.FIREBASE_API_KEY}`,
+        {
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken
+        }
+      );
+
+      // Extraer el nuevo idToken y otros datos importantes
+      const { id_token, refresh_token, expires_in, user_id } = response.data;
+
+      return {
+        success: true,
+        message: 'Token renovado exitosamente',
+        data: response.data,
+        idToken: id_token,
+        refreshToken: refresh_token
+      };
+    } catch (error: any) {
+      console.error('Error al renovar token:', error.response?.data || error.message);
+      
+      // Manejar errores específicos
       const errorCode = error.response?.data?.error?.message || 'auth/unknown-error';
       const errorMessage = this.getFirebaseAuthErrorMessage(errorCode);
       

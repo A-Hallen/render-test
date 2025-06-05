@@ -3,13 +3,7 @@ import { Card, Button, Alert, Spinner, Badge } from '../components/ui';
 import { RefreshCw, Database, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/auth';
-
-interface EstadoSincronizacion {
-  enProceso: boolean;
-  ultimaSincronizacion: string;
-  programada: boolean;
-  expresionCron: string;
-}
+import { EstadoSincronizacion, obtenerEstadoSincronizacion, iniciarSincronizacion as iniciarSincronizacionService } from '../services/sincronizacion.service';
 
 export const Sincronizacion: React.FC = () => {
   const [estado, setEstado] = useState<EstadoSincronizacion | null>(null);
@@ -36,13 +30,7 @@ export const Sincronizacion: React.FC = () => {
       setCargando(true);
       setError(null);
       
-      const response = await fetch('/api/sincronizacion/estado');
-      
-      if (!response.ok) {
-        throw new Error(`Error al obtener estado: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      const data = await obtenerEstadoSincronizacion();
       setEstado(data);
     } catch (err: any) {
       console.error('Error al cargar estado de sincronización:', err);
@@ -59,17 +47,9 @@ export const Sincronizacion: React.FC = () => {
       setError(null);
       setMensaje(null);
       
-      const response = await fetch('/api/sincronizacion/iniciar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ forzarCompleta: completa })
-      });
+      const data = await iniciarSincronizacionService(completa);
       
-      const data = await response.json();
-      
-      if (!response.ok) {
+      if (!data.exito) {
         throw new Error(data.mensaje || 'Error al iniciar sincronización');
       }
       

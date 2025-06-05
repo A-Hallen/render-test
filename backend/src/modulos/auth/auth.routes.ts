@@ -23,6 +23,7 @@ export class AuthRoutes {
     this.router.post('/register', this.authController.register.bind(this.authController));
     this.router.post('/login', this.authController.login.bind(this.authController));
     this.router.post('/password-reset', this.authController.requestPasswordReset.bind(this.authController));
+    this.router.post('/refresh-token', this.authController.refreshToken.bind(this.authController));
     
     // Rutas para verificación de email
     this.router.post('/verify-email', this.authController.verifyEmail.bind(this.authController));

@@ -33,8 +33,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Obtener el usuario actual y estado de autenticación
   const { user, isAuthenticated } = useAuth();
   // Estado para las notificaciones
-  const [notifications, setNotifications] = useState<NotificationMeta[]>([
-  ]);
+  const [notifications, setNotifications] = useState<NotificationMeta[]>([]);
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
@@ -45,6 +44,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [hasMoreNotifications, setHasMoreNotifications] = useState<boolean>(true);
   const [lastTimestamp, setLastTimestamp] = useState<number | null>(null);
   const [pageSize] = useState<number>(10); // Número de notificaciones por página
+  const [error, setError] = useState<string | null>(null);
   
   // Obtener o generar un ID de dispositivo único y persistente
   useEffect(() => {
@@ -70,45 +70,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return;
       }
       
-      // Construir la URL de la API
-      const apiUrl = '/api/notifications';
-      
-      // Endpoint diferente según si el usuario está autenticado o no
-      let endpoint;
-      let body;
-      
-      if (userId) {
-        // Usuario autenticado: asociar token con el usuario
-        endpoint = `${apiUrl}/users/${userId}/fcm-tokens`;
-        body = JSON.stringify({ token, deviceId });
-      } else {
-        // Usuario no autenticado: almacenar token con deviceId solamente
-        endpoint = `${apiUrl}/anonymous-tokens`;
-        body = JSON.stringify({ token, deviceId });
-      }
-      
-      // Enviar el token al backend
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Añadir token de autenticación si está disponible
-          ...(localStorage.getItem('fincoopToken') ? {
-            'Authorization': `Bearer ${localStorage.getItem('fincoopToken')}`
-          } : {}),
-        },
-        body,
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error al enviar el token FCM: ${response.statusText}`);
-      }
-      
-      console.log('Token FCM enviado correctamente al backend');
+      // Usar el servicio de notificaciones para registrar el token
+      await NotificationService.registerToken(token, userId, deviceId);
+      console.log('Token FCM registrado correctamente');
     } catch (error) {
-      console.error('Error al enviar el token FCM al backend:', error);
-      // No mostramos error al usuario ya que esto es un proceso en segundo plano
-    }
+      console.error('Error al registrar token FCM:', error);
+    }  // No mostramos error al usuario ya que esto es un proceso en segundo plano
   };
   
   // Función para solicitar permiso para notificaciones y obtener el token FCM
@@ -356,9 +323,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
   }, [pageSize]);
   
-  // Estado para manejar errores de carga
-  const [error, setError] = useState<string | null>(null);
-  
   // Función para cargar notificaciones del usuario desde el backend
   const loadUserNotifications = async (userId: string) => {
     try {
@@ -530,7 +494,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 export const useNotification = (): NotificationContextType => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error('useNotification must be used within a NotificationProvider');
+    throw new Error('useNotification debe ser usado dentro de un NotificationProvider');
   }
   return context;
 };

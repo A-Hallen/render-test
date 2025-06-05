@@ -4,6 +4,7 @@
  */
 
 import { NotificationMeta } from "../types/notification";
+import { httpClient } from "./httpClient";
 
 export class NotificationService {
   private apiUrl: string;
@@ -23,36 +24,18 @@ export class NotificationService {
     try {
       // Endpoint diferente según si el usuario está autenticado o no
       let endpoint;
-      let body;
+      const data = { token, deviceId };
       
       if (userId) {
         // Usuario autenticado: asociar token con el usuario
         endpoint = `/api/notifications/users/${userId}/fcm-tokens`;
-        body = JSON.stringify({ token, deviceId });
       } else {
         // Usuario no autenticado: almacenar token con deviceId solamente
         endpoint = `/api/notifications/anonymous-tokens`;
-        body = JSON.stringify({ token, deviceId });
       }
       
-      // Enviar el token al backend
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Añadir token de autenticación si está disponible
-          ...(localStorage.getItem('fincoopToken') ? {
-            'Authorization': `Bearer ${localStorage.getItem('fincoopToken')}`
-          } : {}),
-        },
-        body,
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error al registrar token FCM: ${response.statusText}`);
-      }
-      
-      return await response.json();
+      // Usar el cliente HTTP centralizado
+      return await httpClient.post(endpoint, data);
     } catch (error) {
       console.error('Error al registrar token FCM:', error);
       throw error;
@@ -67,28 +50,12 @@ export class NotificationService {
    */
   async getUserNotifications(userId: string, filters?: { read?: boolean, startDate?: number, endDate?: number, limit?: number }): Promise<NotificationMeta[]> {
     try {
-      // Construir query params
-      const queryParams = new URLSearchParams();
-      if (filters?.read !== undefined) queryParams.append('read', filters.read.toString());
-      if (filters?.startDate) queryParams.append('startDate', filters.startDate.toString());
-      if (filters?.endDate) queryParams.append('endDate', filters.endDate.toString());
-      if (filters?.limit) queryParams.append('limit', filters.limit.toString());
-      
-      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-      
-      const response = await fetch(`${this.apiUrl}/users/${userId}/notifications${queryString}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('fincoopToken')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error al obtener notificaciones: ${response.statusText}`);
-      }
-
-      return await response.json();
+      // Usar el cliente HTTP centralizado con parámetros de consulta
+      return await httpClient.get(
+        `${this.apiUrl}/users/${userId}/notifications`,
+        {},
+        filters
+      );
     } catch (error) {
       console.error('Error al obtener notificaciones:', error);
       throw error;
@@ -103,19 +70,7 @@ export class NotificationService {
    */
   async markNotificationAsRead(userId: string, notificationId: string): Promise<NotificationMeta> {
     try {
-      const response = await fetch(`${this.apiUrl}/users/${userId}/notifications/${notificationId}/read`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('fincoopToken')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error al marcar notificación como leída: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await httpClient.patch(`${this.apiUrl}/users/${userId}/notifications/${notificationId}/read`, {});
     } catch (error) {
       console.error('Error al marcar notificación como leída:', error);
       throw error;
@@ -129,19 +84,7 @@ export class NotificationService {
    */
   async markAllNotificationsAsRead(userId: string): Promise<{ count: number }> {
     try {
-      const response = await fetch(`${this.apiUrl}/users/${userId}/notifications/read-all`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('fincoopToken')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error al marcar todas las notificaciones como leídas: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await httpClient.patch(`${this.apiUrl}/users/${userId}/notifications/read-all`, {});
     } catch (error) {
       console.error('Error al marcar todas las notificaciones como leídas:', error);
       throw error;
@@ -156,19 +99,7 @@ export class NotificationService {
    */
   async deleteNotification(userId: string, notificationId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.apiUrl}/users/${userId}/notifications/${notificationId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('fincoopToken')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error al eliminar notificación: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await httpClient.delete(`${this.apiUrl}/users/${userId}/notifications/${notificationId}`);
     } catch (error) {
       console.error('Error al eliminar notificación:', error);
       throw error;
@@ -182,19 +113,7 @@ export class NotificationService {
    */
   async deleteAllNotifications(userId: string): Promise<{ count: number }> {
     try {
-      const response = await fetch(`${this.apiUrl}/users/${userId}/notifications`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('fincoopToken')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error al eliminar todas las notificaciones: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await httpClient.delete(`${this.apiUrl}/users/${userId}/notifications`);
     } catch (error) {
       console.error('Error al eliminar todas las notificaciones:', error);
       throw error;

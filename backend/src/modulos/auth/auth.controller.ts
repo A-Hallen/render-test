@@ -3,6 +3,11 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { UserRole } from './interfaces/user.interface';
 
+// Interfaz para la solicitud de refresh token
+interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
 export class AuthController {
   private authService: AuthService;
 
@@ -399,6 +404,49 @@ export class AuthController {
       res.status(500).json({
         message: error.message || 'Error al verificar email',
         code: error.code
+      });
+    }
+  }
+
+  /**
+   * Renueva el token de acceso usando un refresh token
+   * @param req Request con refreshToken en el body
+   * @param res Response con nuevo token y refresh token
+   */
+  async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+      
+      if (!refreshToken) {
+        res.status(400).json({ 
+          success: false,
+          message: 'Se requiere refresh token',
+          code: 'auth/missing-refresh-token'
+        });
+        return;
+      }
+
+      const result = await this.authService.refreshToken(refreshToken);
+      
+      res.status(200).json({
+        success: true,
+        token: result.token,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn
+      });
+    } catch (error: any) {
+      // Determinar el código de estado HTTP apropiado
+      const statusCode = error.code === 'auth/invalid-refresh-token' ? 401 : 500;
+      
+      console.error(`Error en refresh token (${statusCode}):`, {
+        code: error.code,
+        message: error.message
+      });
+      
+      res.status(statusCode).json({
+        success: false,
+        message: error.message || 'Error al renovar token',
+        code: error.code || 'auth/unknown-error'
       });
     }
   }

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FileText, Edit2, Trash, PlusIcon } from "lucide-react";
 import {
-  ConfiguracionGuardadaResponse,
   ConfiguracionReporteDTO,
   ReporteTendenciaResponse
 } from "shared/src/types/reportes.types";
@@ -15,12 +14,13 @@ import {
 } from "../features/reportes/nuevoReporte";
 import { OficinasDTO } from "shared/src/types/oficinas.types";
 import toast from "react-hot-toast";
-import { ApiResponse } from "shared/src/types/generic.types";
 import {
   EliminarConfiguracionDialog,
   EliminarConfiguracionHandle,
 } from "../features/reportes/eliminarReporteDialog";
 import { ReporteContabilidad } from "../features/reportes/reporteContabilidad";
+import { obtenerReportesActivos, crearConfiguracionReporte, actualizarConfiguracionReporte, eliminarConfiguracionReporte } from "../services/reportes.service";
+import { obtenerOficinas } from "../services/data.service";
 
 export const Reports: React.FC = () => {
   const [reportesActivos, setReportesActivos] = useState<
@@ -42,9 +42,13 @@ export const Reports: React.FC = () => {
   };
 
   const reload = async () => {
-    const reportesResponse = await fetch("/api/configuracion-reportes/contabilidad/activos");
-    const reportesData = await reportesResponse.json();
-    setReportesActivos(reportesData.configuraciones);
+    try {
+      const reportesData = await obtenerReportesActivos();
+      setReportesActivos(reportesData.configuraciones);
+    } catch (error) {
+      console.error("Error al cargar reportes activos:", error);
+      toast.error("No se pudieron cargar los reportes");
+    }
   };
 
   const handleEliminarConfiguracion = (
@@ -66,27 +70,23 @@ export const Reports: React.FC = () => {
     const promise = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/configuracion-reportes/contabilidad/configuracion", {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(configuracion),
-        });
-        const parseResponse = await response.json();
-        if (!(parseResponse as ApiResponse).success) {
-          throw new Error("Ah ocurrido un error al eliminar la configuración");
+        // Usar el servicio centralizado para eliminar la configuración
+        const parseResponse = await eliminarConfiguracionReporte(configuracion);
+        if (!parseResponse.success) {
+          throw new Error("Ha ocurrido un error al eliminar la configuración");
         }
         await reload();
       } catch (error) {
+        console.error("Error al eliminar configuración:", error);
+        throw error;
       } finally {
         setIsLoading(false);
       }
     };
     await toast.promise(promise, {
-      loading: "Eliminando configuración ...",
+      loading: "Eliminando configuración...",
       success: "Configuración eliminada!",
-      error: "Ah ocurrido un error al eliminar la configuración",
+      error: "Ha ocurrido un error al eliminar la configuración",
     });
   };
 
@@ -96,29 +96,23 @@ export const Reports: React.FC = () => {
     const promise = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/configuracion-reportes/contabilidad/configuracion", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(configuracion),
-        });
-        const parseResponse =
-          (await response.json()) as ConfiguracionGuardadaResponse;
+        // Usamos el nombre como identificador ya que ConfiguracionReporteDTO no tiene id
+        const parseResponse = await actualizarConfiguracionReporte(configuracion);
         if (!parseResponse.success) {
-          throw new Error("A ocurrido un error al actualizar la configuración");
+          throw new Error("Ha ocurrido un error al actualizar la configuración");
         }
         await reload();
       } catch (error) {
+        console.error("Error al actualizar configuración:", error);
         throw error;
       } finally {
         setIsLoading(false);
       }
     };
     await toast.promise(promise, {
-      loading: "Actualizando configuración ...",
+      loading: "Actualizando configuración...",
       success: "Configuración actualizada correctamente",
-      error: "Ah ocurrido un error al actualizada la configuración",
+      error: "Ha ocurrido un error al actualizar la configuración",
     });
   };
 
@@ -128,30 +122,23 @@ export const Reports: React.FC = () => {
     const promise = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/configuracion-reportes/contabilidad/configuracion", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(configuracion),
-        });
-        const parsedResponse =
-          (await response.json()) as ConfiguracionGuardadaResponse;
+        const parsedResponse = await crearConfiguracionReporte(configuracion);
         if (!parsedResponse.success) {
-          throw new Error("Ah ocurrido un error al crear la configuración");
+          throw new Error("Ha ocurrido un error al crear la configuración");
         }
 
         await reload();
       } catch (error) {
+        console.error("Error al crear configuración:", error);
         throw error;
       } finally {
         setIsLoading(false);
       }
     };
     await toast.promise(promise, {
-      loading: "Creando configuración ...",
+      loading: "Creando configuración...",
       success: "Configuración creada correctamente",
-      error: "A ocurrido un error al crear la configuración",
+      error: "Ha ocurrido un error al crear la configuración",
     });
   };
 
@@ -159,11 +146,11 @@ export const Reports: React.FC = () => {
     const cargarOficinas = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/oficinas");
-        const data = await response.json();
-        setOficinas(data.oficinas);
+        const oficinasData = await obtenerOficinas();
+        setOficinas(oficinasData);
       } catch (error) {
-        console.error("Error fetching oficinas:", error);
+        console.error("Error al cargar oficinas:", error);
+        toast.error("No se pudieron cargar las oficinas");
       } finally {
         setIsLoading(false);
       }
@@ -171,11 +158,11 @@ export const Reports: React.FC = () => {
     const fetchReportesActivos = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/configuracion-reportes/contabilidad/activos");
-        const data = await response.json();
+        const data = await obtenerReportesActivos();
         setReportesActivos(data.configuraciones);
       } catch (error) {
-        console.error("Error fetching active reports:", error);
+        console.error("Error al cargar reportes activos:", error);
+        toast.error("No se pudieron cargar los reportes");
       } finally {
         setIsLoading(false);
       }

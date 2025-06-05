@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Bot, User, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
 import { InputAudio } from './InputAudio';
 import ReactMarkdown from "react-markdown";
+import { enviarMensaje, enviarAudio } from "../../services/chat.service";
 
 interface Message {
   id: string;
@@ -27,13 +28,12 @@ export const ChatInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const setInputAudio = (audioBlob: Blob) => {
+  const setInputAudio = async (audioBlob: Blob) => {
     const id = Date.now().toString();
-    //const audioUrl = URL.createObjectURL(audioBlob);
     const userMessage: Message = {
       id: id,
       sender: 'user',
-      text: '',
+      text: 'Enviando audio...',
       audio: audioBlob,
       timestamp: new Date(),
       state: 'sending',
@@ -42,60 +42,57 @@ export const ChatInterface: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     
-    // Prepare conversation history for context
+    // Preparar historial de conversación para contexto
     const conversationHistory = messages.map(msg => ({
       role: msg.sender === 'user' ? 'user' : 'model',
       content: msg.text
     }));
 
-    const formData = new FormData();
-    const audioFile = new File([audioBlob], 'audio.mp3', {
-      type: 'audio/mpeg' // Ajusta el tipo MIME según tu formato de audio
-    });
-    formData.append('audio', audioFile);
-    formData.append('conversation', JSON.stringify(conversationHistory));
-
-    fetch('api/chat/audio', {
-      method: 'POST',
-      body: formData,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === id
-              ? {
-                ...msg,
-                state: 'received',
-                text: data.transcription || 'No se pudo transcribir el audio.',
-              }
-              : msg
-          )
-        );
-
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          sender: 'ai',
-          text: data.response || 'Lo siento, no tengo información específica sobre esa consulta.',
-          audio: null,
-          timestamp: new Date(),
-          state: 'received',
-        };
-
-        setMessages((prev) => [...prev, aiMessage]);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        console.error('Error processing audio:', error);
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === id
-              ? { ...msg, state: 'error', text: 'Error al enviar el audio.' }
-              : msg
-          )
-        );
-        setIsLoading(false);
+    try {
+      // Crear un archivo de audio a partir del blob
+      const audioFile = new File([audioBlob], 'audio.mp3', {
+        type: 'audio/mpeg'
       });
+      
+      // Usar el servicio centralizado para enviar el audio
+      const data = await enviarAudio(audioFile, conversationHistory);
+      
+      // Actualizar el mensaje del usuario con la transcripción
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === id
+            ? {
+              ...msg,
+              state: 'received',
+              text: data.transcription || 'No se pudo transcribir el audio.',
+            }
+            : msg
+        )
+      );
+
+      // Crear mensaje de respuesta del AI
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        sender: 'ai',
+        text: data.response || 'Lo siento, no tengo información específica sobre esa consulta.',
+        audio: null,
+        timestamp: new Date(),
+        state: 'received',
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error processing audio:', error);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === id
+            ? { ...msg, state: 'error', text: 'Error al enviar el audio.' }
+            : msg
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   // Autoscroll to the bottom when messages change
@@ -107,7 +104,7 @@ export const ChatInterface: React.FC = () => {
     if (!inputText.trim()) return;
     const id = Date.now().toString();
 
-    // Add user message
+    // Agregar mensaje del usuario
     const userMessage: Message = {
       id: id,
       sender: 'user',
@@ -121,65 +118,68 @@ export const ChatInterface: React.FC = () => {
     setInputText('');
     setIsLoading(true);
     
-    // Prepare conversation history for context
+    // Preparar historial de conversación para contexto
     const conversationHistory = messages.map(msg => ({
       role: msg.sender === 'user' ? 'user' : 'model',
       content: msg.text
     }));
     
-    // Add the current message
+    // Agregar el mensaje actual
     conversationHistory.push({
       role: 'user',
       content: inputText
     });
 
-    fetch('api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        message: userMessage.text,
-        conversation: conversationHistory 
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          sender: 'ai',
-          text: data.message || 'Lo siento, no tengo información específica sobre esa consulta.',
-          timestamp: new Date(),
-          audio: null,
-          state: 'received',
-        };
+    try {
+      // Usar el servicio centralizado para enviar el mensaje
+      const data = await enviarMensaje(userMessage.text, conversationHistory);
+      
+      // Actualizar el estado del mensaje del usuario
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === id
+            ? { ...msg, state: 'received' }
+            : msg
+        )
+      );
+      
+      // Crear mensaje de respuesta del AI
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        sender: 'ai',
+        text: data.message || 'Lo siento, no tengo información específica sobre esa consulta.',
+        timestamp: new Date(),
+        audio: null,
+        state: 'received',
+      };
 
-        setMessages((prev) => [...prev, aiMessage]);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        console.error('Error fetching AI response:', error);
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          sender: 'ai',
-          text: 'Hubo un error al procesar tu consulta. Por favor, inténtalo de nuevo más tarde.',
-          timestamp: new Date(),
-          audio: null,
-          state: 'received',
-        };
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      
+      // Actualizar el estado del mensaje del usuario
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === id
+            ? { ...msg, state: 'received' }
+            : msg
+        )
+      );
+      
+      // Crear mensaje de error
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        sender: 'ai',
+        text: 'Hubo un error al procesar tu consulta. Por favor, inténtalo de nuevo más tarde.',
+        timestamp: new Date(),
+        audio: null,
+        state: 'received',
+      };
 
-        setMessages((prev) => [...prev, aiMessage]);
-        setIsLoading(false);
-      }).finally(() => {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === id
-              ? { ...msg, state: 'received', text: inputText }
-              : msg
-          )
-        );
-      });
+      setMessages(prev => [...prev, aiMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -267,7 +267,24 @@ export const ChatInterface: React.FC = () => {
               </div>
               <div className="p-3">
                 <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none">
-                  <ReactMarkdown>{message.text}</ReactMarkdown>
+                  {message.sender === 'ai' ? 
+                    <ReactMarkdown>
+                      {message.text}
+                    </ReactMarkdown> : 
+                    <p>
+                      {message.text}
+                      {message.state === 'sending' && (
+                        <span className="ml-2 inline-block">
+                          <Loader2 size={12} className="animate-spin text-blue-500" />
+                        </span>
+                      )}
+                      {message.state === 'error' && (
+                        <span className="ml-2 text-xs text-red-500">
+                          Error al enviar
+                        </span>
+                      )}
+                    </p>
+                  }
                 </div>
                 {
                   message.audio ? (

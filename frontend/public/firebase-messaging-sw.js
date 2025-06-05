@@ -3,17 +3,34 @@
 importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
 
-// Configuración de Firebase - debe coincidir con la configuración en firebaseConfig.ts
-firebase.initializeApp({
-  apiKey: 'VITE_FIREBASE_API_KEY',
-  authDomain: 'VITE_FIREBASE_AUTH_DOMAIN',
-  projectId: 'VITE_FIREBASE_PROJECT_ID',
-  storageBucket: 'VITE_FIREBASE_STORAGE_BUCKET',
-  messagingSenderId: 'VITE_FIREBASE_MESSAGING_SENDER_ID',
-  appId: 'VITE_FIREBASE_APP_ID'
-});
-
-const messaging = firebase.messaging();
+// Verificar si Firebase ya está inicializado
+function initializeFirebase() {
+  try {
+    // Si no hay apps inicializadas, inicializar Firebase
+    if (!firebase.apps.length) {
+      const firebaseConfig = {
+        apiKey: 'AIzaSyD54BJyVMZuRjo6kru654Q_pX8_TQWK5ZQ',
+        authDomain: 'ais-asistente.firebaseapp.com',
+        projectId: 'ais-asistente',
+        storageBucket: 'ais-asistente.appspot.com',
+        messagingSenderId: '100878286150069711628',
+        appId: '1:100878286150069711628:web:5881666b40a94302955807'
+      };
+      
+      firebase.initializeApp(firebaseConfig);
+      console.log('[firebase-messaging-sw.js] Firebase inicializado correctamente');
+      return firebase.messaging();
+    } else {
+      // Usar la instancia existente
+      console.log('[firebase-messaging-sw.js] Usando instancia existente de Firebase');
+      return firebase.messaging();
+    }
+  } catch (error) {
+    console.error('[firebase-messaging-sw.js] Error al inicializar Firebase:', error);
+    return null;
+  }
+}
+const messaging = initializeFirebase();
 
 // Manejo de mensajes en segundo plano
 messaging.onBackgroundMessage((payload) => {

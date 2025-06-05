@@ -3,12 +3,12 @@ import {
   ConfiguracionReporteDTO, 
   ReporteTendenciaResponse,
   ReporteContabilidadRangoRequest,
-  ReporteContabilidadRangoResponse,
   adaptarDatosReporte
 } from "shared/src/types/reportes.types";
 import { Calendar, Clock, CalendarRange, X, UserRound } from 'lucide-react';
 import { OficinasDTO } from "shared/src/types/oficinas.types";
 import toast from 'react-hot-toast';
+import { generarReporteRango } from "../../services/reportes.service";
 
 export type NuevoReporteHandle = {
   openModal: () => void;
@@ -24,7 +24,7 @@ interface NuevoReporteProps {
 export const NuevoReporteView = forwardRef<NuevoReporteHandle, NuevoReporteProps>(
   ({ onClose, tiposReporte, oficinas }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
+    // Eliminamos isVisible ya que no se utiliza en la renderización
     const [selectedTipo, setSelectedTipo] = useState<ConfiguracionReporteDTO | null>(null);
     const [selectedOficina, setSelectedOficina] = useState<string>('');
     const [periodo, setPeriodo] = useState('mensual');
@@ -34,11 +34,11 @@ export const NuevoReporteView = forwardRef<NuevoReporteHandle, NuevoReporteProps
 
     const openModal = () => {
       setIsOpen(true);
-      setTimeout(() => setIsVisible(true), 100);
+      // Ya no necesitamos manejar isVisible
     };
 
     const closeModal = () => {
-      setIsVisible(false);
+      // Ya no necesitamos manejar isVisible
       setTimeout(() => {
         setIsOpen(false);
         onClose?.();
@@ -68,52 +68,47 @@ export const NuevoReporteView = forwardRef<NuevoReporteHandle, NuevoReporteProps
         return;
       }
 
-      const toastId = toast.loading("Creando reporte...");
-
-      try {
-        setCreandoReporte(true);
-        // Crear la solicitud para el endpoint /rango
-        const req: ReporteContabilidadRangoRequest = {
-          fechaInicio: fechaInicio,
-          fechaFin: fechaFin,
-          oficina: selectedOficina,
-          nombreConfiguracion: selectedTipo?.nombre || '',
-          tipoReporte: periodo
-        };
-        
-        const response = await fetch("api/reportes/contabilidad/rango", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(req)
-        })
-
-
-        const responseData: ReporteContabilidadRangoResponse = await response.json();
-        
-        if (!responseData.success) {
-          toast.error(responseData.message || 'Error al crear el reporte');
-          return;
+      const promise = async () => {
+        try {
+          setCreandoReporte(true);
+          // Crear la solicitud para el endpoint /rango
+          const req: ReporteContabilidadRangoRequest = {
+            fechaInicio: fechaInicio,
+            fechaFin: fechaFin,
+            oficina: selectedOficina,
+            nombreConfiguracion: selectedTipo?.nombre || '',
+            tipoReporte: periodo
+          };
+          
+          const responseData = await generarReporteRango(req);
+          console.log("reporte response", responseData);
+          
+          if (!responseData.success) {
+            throw new Error(responseData.message || 'Error al crear el reporte');
+          }
+          
+          // Pasar los datos del reporte al componente padre
+          if ('data' in responseData && responseData.data) {
+            // Adaptar los datos al formato esperado por los componentes frontend
+            const datosAdaptados = adaptarDatosReporte(responseData.data);
+            onClose?.(datosAdaptados);
+          }
+          
+          return responseData;
+        } catch (error) {
+          console.error("Error al crear reporte:", error);
+          throw error;
+        } finally {
+          closeModal();
+          setCreandoReporte(false);
         }
-        
-        toast.success("Reporte creado exitosamente");
-        
-        // Pasar los datos del reporte al componente padre
-        if ('data' in responseData && responseData.data) {
-          // Adaptar los datos al formato esperado por los componentes frontend
-          const datosAdaptados = adaptarDatosReporte(responseData.data);
-          onClose?.(datosAdaptados);
-          return;
-        }
-      } catch (error) {
-        console.error('Error creating report:', error);
-        toast.error("Error al crear el reporte");
-      } finally {
-        closeModal();
-        toast.dismiss(toastId);
-        setCreandoReporte(false);
-      }
+      };
+      
+      await toast.promise(promise, {
+        loading: "Creando reporte...",
+        success: "Reporte creado exitosamente",
+        error: (err) => `${err instanceof Error ? err.message : 'Error al crear el reporte'}`
+      });
     };
 
     if (!isOpen) return null;

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, UserRole } from "../types/auth";
 import { authService } from "../services/authService";
+import { SESSION_EXPIRED_EVENT } from "../services/httpClient";
 
 // Definir tipos de acciones
 export enum Action {
@@ -39,6 +40,7 @@ interface AuthContextType {
   filterAllowedData: <T extends Record<string, any>>(data: T[]) => T[];
   updateUserState: (updatedUser: User) => void;
   profileVersion: number; // Para forzar re-renderizado cuando cambia la imagen
+  getProfile: () => Promise<any>; // Función para obtener el perfil del usuario
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,6 +75,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.removeItem("fincoopToken");
       }
     }
+    
+    // Configurar listener para evento de sesión expirada
+    const handleSessionExpired = () => {
+      // Limpiar estado de autenticación
+      setUser(null);
+      setToken(null);
+      setIsAuthenticated(false);
+      setIsEmailVerified(false);
+      
+      // Mostrar mensaje al usuario
+      setError("Tu sesión ha expirado. Por favor inicia sesión nuevamente.");
+      
+      // Opcional: redirigir a la página de login
+      // window.location.href = "/login";
+    };
+    
+    // Registrar el listener
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    
+    // Limpiar el listener cuando el componente se desmonte
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    };
   }, []);
 
   const clearError = () => {
@@ -114,6 +139,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.setItem("fincoopUser", JSON.stringify(response.user));
       localStorage.setItem("fincoopToken", response.token);
       
+      // Guardar refresh token si está disponible
+      if (response.refreshToken) {
+        localStorage.setItem("fincoopRefreshToken", response.refreshToken);
+      }
+      
       // Opcional: guardar tiempo de expiración del token
       if (response.expiresIn) {
         const expirationTime = Date.now() + response.expiresIn * 1000;
@@ -149,10 +179,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
    * Envía un correo de verificación al email del usuario
    * @param email Email del usuario a verificar
    */
+  /**
+   * Obtiene el perfil del usuario actual
+   * @returns Datos del perfil del usuario
+   */
+  const getProfile = async () => {
+    try {
+      return await authService.getProfile();
+    } catch (error) {
+      console.error('Error al obtener perfil:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Envía un correo de verificación al email del usuario
+   * @param email Email del usuario a verificar
+   */
   const sendEmailVerification = async (email: string) => {
     setIsLoading(true);
     setError(null);
-    
     try {
       await authService.sendEmailVerification(email);
       console.log(`Correo de verificación enviado a: ${email}`);
@@ -214,6 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsEmailVerified(false);
     localStorage.removeItem("fincoopUser");
     localStorage.removeItem("fincoopToken");
+    localStorage.removeItem("fincoopRefreshToken");
   };
 
   /**
@@ -418,6 +465,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // La función getProfile ya está definida arriba
+
   return (
     <AuthContext.Provider
       value={{
@@ -436,7 +485,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         canAccessFinancialData,
         filterAllowedData,
         updateUserState,
-        profileVersion
+        profileVersion,
+        getProfile,
       }}
     >
       {children}

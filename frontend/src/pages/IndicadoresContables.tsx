@@ -4,6 +4,7 @@ import { Calendar, Search, RefreshCw, Info } from 'lucide-react';
 import { IndicadorCircular } from '../components/indicadores';
 import { DetalleIndicador } from '../components/indicadores/DetalleIndicador';
 import { OficinasService, Oficina } from '../services/OficinasService';
+import { obtenerIndicadoresPorRango } from '../services/indicadores.service';
 import '../components/ui/DateInput.css';  // Importar estilos para el input de fecha
 
 interface IndicadorContable {
@@ -27,29 +28,7 @@ interface FiltrosIndicadores {
   fecha: string;
 }
 
-// Servicio para manejar las llamadas a la API de KPIs contables
-const KPIContablesService = {
-  async obtenerKPIsPorFecha(oficina: string, fechaInicio: string, fechaFin: string) {
-    try {
-      console.log("oficina", oficina)
-      console.log("fechaInicio", fechaInicio)
-      console.log("fechaFin", fechaFin)
-      const url = `/api/kpi-contables/rango-fechas?oficina=${encodeURIComponent(oficina)}&fechaInicio=${encodeURIComponent(fechaInicio)}&fechaFin=${encodeURIComponent(fechaFin)}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.mensaje || `Error: ${response.statusText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error al obtener KPIs contables:', error);
-      throw error;
-    }
-  }
-}
+// Usamos el servicio centralizado para indicadores contables
 
 export const IndicadoresContables: React.FC = () => {
   const [indicadores, setIndicadores] = useState<IndicadorContable[]>([]);
@@ -120,7 +99,7 @@ export const IndicadoresContables: React.FC = () => {
       const oficinaSeleccionada = filtros.oficina;
       const fechaSeleccionada = filtros.fecha;
       
-      const data = await KPIContablesService.obtenerKPIsPorFecha(oficinaSeleccionada, fechaSeleccionada, fechaSeleccionada);
+      const data = await obtenerIndicadoresPorRango(oficinaSeleccionada, fechaSeleccionada, fechaSeleccionada);
       
       // Verificar si hay indicadores calculados para la fecha
       if (!data.kpisCalculados || Object.keys(data.kpisCalculados).length === 0) {

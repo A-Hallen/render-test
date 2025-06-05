@@ -65,8 +65,8 @@ export class AuthService {
       }
       
       // Usamos directamente el idToken de la respuesta de Firebase Auth
-      // Este es un ID token válido que puede ser verificado con verifyIdToken
       const token = authResult.idToken;
+      const refreshToken = authResult.refreshToken;
       
       // Actualizar último acceso del usuario
       await this.authRepository.updateLastLogin(user.uid);
@@ -81,6 +81,7 @@ export class AuthService {
       return {
         user: updatedUser,
         token,
+        refreshToken, // Incluir el refresh token en la respuesta
         expiresIn: 3600 // 1 hora
       };
     } catch (error: any) {
@@ -91,6 +92,42 @@ export class AuthService {
         throw error;
       } else {
         throw { code: 'auth/unknown-error', message: 'Error desconocido al iniciar sesión' };
+      }
+    }
+  }
+  
+  /**
+   * Renueva un token de acceso usando un refresh token
+   * @param refreshToken Token de actualización
+   * @returns Nuevo token de acceso y refresh token
+   * @throws Error si el refresh token es inválido o ha expirado
+   */
+  async refreshToken(refreshToken: string): Promise<{ token: string; refreshToken: string; expiresIn: number }> {
+    try {
+      if (!refreshToken) {
+        throw { code: 'auth/invalid-refresh-token', message: 'Refresh token no proporcionado' };
+      }
+
+      // Intentar renovar el token usando el refresh token
+      const result = await this.authRepository.refreshAccessToken(refreshToken);
+      
+      if (!result.success || !result.idToken) {
+        throw { code: result.code || 'auth/invalid-refresh-token', message: result.message || 'No se pudo renovar el token' };
+      }
+      
+      return {
+        token: result.idToken,
+        refreshToken: result.refreshToken || refreshToken, // Usar el nuevo refresh token si está disponible
+        expiresIn: 3600 // 1 hora
+      };
+    } catch (error: any) {
+      console.error('Error al renovar token:', error);
+      
+      // Transformar errores a un formato consistente
+      if (error.code) {
+        throw error;
+      } else {
+        throw { code: 'auth/unknown-error', message: 'Error desconocido al renovar token' };
       }
     }
   }

@@ -1,10 +1,11 @@
 /**
- * Servicio para integraciu00f3n con el core financiero
+ * Servicio para integración con el core financiero
  * Permite extraer datos del core financiero y procesarlos
  */
 
 import { DatoFinanciero, TipoDato } from '../features/visualizacion/modelo/DatoFinanciero';
 import { firebaseService } from './FirebaseService';
+import { httpClient } from './httpClient';
 
 // Interfaz para filtros de consulta
 export interface FiltroConsulta {
@@ -51,37 +52,20 @@ export interface TransaccionCoreResponse {
  * Servicio para extraer datos del core financiero
  */
 export class CoreFinancieroService {
-  private apiUrl: string;
+  constructor() {}
   
-  constructor() {
-    this.apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-  }
   
   /**
    * Obtiene indicadores financieros del core
    */
   async obtenerIndicadores(filtros: FiltroConsulta = {}): Promise<DatoFinanciero[]> {
     try {
-      const url = new URL(`${this.apiUrl}/indicadores`);
-      
-      // Agregar filtros a la URL
-      Object.entries(filtros).forEach(([key, value]) => {
-        if (value !== undefined) {
-          if (value instanceof Date) {
-            url.searchParams.append(key, value.toISOString());
-          } else {
-            url.searchParams.append(key, String(value));
-          }
-        }
-      });
-      
-      const response = await fetch(url.toString());
-      
-      if (!response.ok) {
-        throw new Error(`Error al obtener indicadores: ${response.statusText}`);
-      }
-      
-      const indicadoresCore: IndicadorFinancieroCoreResponse[] = await response.json();
+      // Usar el cliente HTTP centralizado con parámetros de consulta
+      const indicadoresCore: IndicadorFinancieroCoreResponse[] = await httpClient.get(
+        `/indicadores`, 
+        {}, // opciones estándar
+        filtros // parámetros de consulta
+      );
       
       // Transformar a formato DatoFinanciero
       return this.transformarIndicadores(indicadoresCore);
@@ -103,26 +87,12 @@ export class CoreFinancieroService {
    */
   async obtenerTransacciones(filtros: FiltroConsulta = {}): Promise<DatoFinanciero[]> {
     try {
-      const url = new URL(`${this.apiUrl}/transacciones`);
-      
-      // Agregar filtros a la URL
-      Object.entries(filtros).forEach(([key, value]) => {
-        if (value !== undefined) {
-          if (value instanceof Date) {
-            url.searchParams.append(key, value.toISOString());
-          } else {
-            url.searchParams.append(key, String(value));
-          }
-        }
-      });
-      
-      const response = await fetch(url.toString());
-      
-      if (!response.ok) {
-        throw new Error(`Error al obtener transacciones: ${response.statusText}`);
-      }
-      
-      const transaccionesCore: TransaccionCoreResponse[] = await response.json();
+      // Usar el cliente HTTP centralizado con parámetros de consulta
+      const transaccionesCore: TransaccionCoreResponse[] = await httpClient.get(
+        `/transacciones`, 
+        {}, // opciones estándar
+        filtros // parámetros de consulta
+      );
       
       // Transformar a formato DatoFinanciero
       return this.transformarTransacciones(transaccionesCore);
@@ -140,35 +110,21 @@ export class CoreFinancieroService {
   }
   
   /**
-   * Obtiene datos de un mu00f3dulo especu00edfico
+   * Obtiene datos de un módulo específico
    */
   async obtenerDatosModulo(modulo: string, filtros: FiltroConsulta = {}): Promise<DatoFinanciero[]> {
     try {
-      const url = new URL(`${this.apiUrl}/modulos/${modulo}/datos`);
-      
-      // Agregar filtros a la URL
-      Object.entries(filtros).forEach(([key, value]) => {
-        if (value !== undefined) {
-          if (value instanceof Date) {
-            url.searchParams.append(key, value.toISOString());
-          } else {
-            url.searchParams.append(key, String(value));
-          }
-        }
-      });
-      
-      const response = await fetch(url.toString());
-      
-      if (!response.ok) {
-        throw new Error(`Error al obtener datos del mu00f3dulo ${modulo}: ${response.statusText}`);
-      }
-      
-      const datosCore = await response.json();
+      // Usar el cliente HTTP centralizado con parámetros de consulta
+      const datosCore = await httpClient.get(
+        `/modulos/${modulo}/datos`, 
+        {}, // opciones estándar
+        filtros // parámetros de consulta
+      );
       
       // Transformar a formato DatoFinanciero
       return this.transformarDatosModulo(datosCore, modulo);
     } catch (error) {
-      console.error(`Error al obtener datos del mu00f3dulo ${modulo}:`, error);
+      console.error(`Error al obtener datos del módulo ${modulo}:`, error);
       
       // Si hay un error, intentar obtener datos de Firebase como fallback
       try {

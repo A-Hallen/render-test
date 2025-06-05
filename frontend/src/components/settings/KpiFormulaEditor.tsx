@@ -7,6 +7,7 @@ import { IndicadorEditor } from "../../features/indicadores/IndicadorEditor";
 import DeleteIndicadorDialog, {
   DeleteIndicadorDialogHandle,
 } from "../../features/indicadores/DeleteIndicadorDialog";
+import { obtenerIndicadoresContables, eliminarIndicadorContable, actualizarIndicadorContable, crearIndicadorContable } from "../../services/indicadores.service";
 
 export const KpiFormulaEditor: React.FC = () => {
   const [indicadores, setIndicadores] = useState<IndicadorResponse[]>([]);
@@ -22,18 +23,19 @@ export const KpiFormulaEditor: React.FC = () => {
   const deleteDialogRef = useRef<DeleteIndicadorDialogHandle>(null);
 
   useEffect(() => {
-    try {
-      fetch(`/api/indicadores-contables`).then((response) =>
-        response.json().then((data) => {
-          if(data.error){
-            throw new Error(data.error);
-          }
-          setIndicadores(data);
-        })
-      );
-    } catch (error) {
-      console.error("Error al obtener los indicadores", error);
-    }
+    const cargarIndicadores = async () => {
+      try {
+        const data = await obtenerIndicadoresContables();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        setIndicadores(data);
+      } catch (error) {
+        console.error("Error al obtener los indicadores", error);
+      }
+    };
+    
+    cargarIndicadores();
   }, []);
 
   const showFormula = (indicador: IndicadorResponse) => {
@@ -46,48 +48,39 @@ export const KpiFormulaEditor: React.FC = () => {
     setIndicadorSeleccionado(null);
     if (!indicador) return;
     deleteDialogRef.current?.close();
-    await fetch(`/api/indicadores-contables/${indicador.id}`, {
-      method: "DELETE",
-    }).then(() => {
-      try {
-        fetch(`/api/indicadores-contables`).then((response) =>
-          response.json().then((data) => {
-            console.log(data);
-            setIndicadores(data);
-          })
-        );
-      } catch (error) {
-        console.error("Error al obtener los indicadores", error);
-      }
-    });
+    
+    try {
+      await eliminarIndicadorContable(indicador.id);
+      // Recargar la lista de indicadores
+      const data = await obtenerIndicadoresContables();
+      setIndicadores(data);
+    } catch (error) {
+      console.error("Error al eliminar el indicador", error);
+    }
   };
 
   const createUpdateIndicador = async (indicador: IndicadorResponse) => {
+    // Actualizar la UI inmediatamente para una mejor experiencia de usuario
     setIndicadores(
       indicadores.map((i) => (i.id === indicador.id ? indicador : i))
     );
-    const url = editIndicador
-      ? `/api/indicadores-contables/${editIndicador.id}`
-      : "/api/indicadores-contables";
-    const method = editIndicador ? "PUT" : "POST";
-    await fetch(url, {
-      method: method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(indicador),
-    }).then(() => {
-      try {
-        fetch(`/api/indicadores-contables`).then((response) =>
-          response.json().then((data) => {
-            console.log(data);
-            setIndicadores(data);
-          })
-        );
-      } catch (error) {
-        console.error("Error al obtener los indicadores", error);
+    
+    try {
+      if (editIndicador) {
+        // Actualizar indicador existente
+        await actualizarIndicadorContable(editIndicador.id, indicador);
+      } else {
+        // Crear nuevo indicador
+        await crearIndicadorContable(indicador);
       }
-    });
+      
+      // Recargar la lista de indicadores para asegurar consistencia con el backend
+      const data = await obtenerIndicadoresContables();
+      setIndicadores(data);
+    } catch (error) {
+      console.error("Error al guardar el indicador", error);
+    }
+    
     setShowEditor(false);
   };
 

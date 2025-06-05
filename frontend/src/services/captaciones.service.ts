@@ -1,17 +1,22 @@
 import { CaptacionResponse } from 'shared';
+import { httpClient } from './httpClient';
 
 const API_URL = '/api/captaciones';
 
 export async function getCaptacionesVista(codigoOficina: string = 'CNS'): Promise<CaptacionResponse> {
-  const url = `${API_URL}/vista?oficina=${encodeURIComponent(codigoOficina)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Error al obtener captaciones a la vista');
-  return await res.json();
+  try {
+    return await httpClient.get(`${API_URL}/vista`, {}, { oficina: codigoOficina });
+  } catch (error) {
+    console.error('Error al obtener captaciones a la vista:', error);
+    throw new Error('Error al obtener captaciones a la vista');
+  }
 }
 
 export async function getCaptacionesPlazo(codigoOficina: string = 'CNS'): Promise<CaptacionResponse> {
-  const url = `${API_URL}/plazo?oficina=${encodeURIComponent(codigoOficina)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Error al obtener captaciones a plazo');
-  return await res.json();
+  try {
+    return await httpClient.get(`${API_URL}/plazo`, {}, { oficina: codigoOficina });
+  } catch (error) {
+    console.error('Error al obtener captaciones a plazo:', error);
+    throw new Error('Error al obtener captaciones a plazo');
+  }
 }
