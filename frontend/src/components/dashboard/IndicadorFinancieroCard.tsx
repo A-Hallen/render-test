@@ -55,7 +55,7 @@ export const IndicadorFinancieroCard: React.FC<IndicadorFinancieroCardProps> = (
   // Función para generar el skeleton loader con la misma estructura y dimensiones que el componente cargado
   const SkeletonLoader = () => {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 relative">
+      <div className="bg-white flex-1 min-w-fit max-w-[600px] rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 relative">
         {/* Barra superior con animación de pulso */}
         <div className="h-1.5 w-full bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse"></div>
         
@@ -142,7 +142,7 @@ export const IndicadorFinancieroCard: React.FC<IndicadorFinancieroCardProps> = (
   const esVariacionPositiva = (data.variacion || 0) >= 0;
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md relative">
+    <div className="bg-white flex-1 min-w-fit max-w-[600px] rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md relative">
       {/* Indicador de estado (barra de color en la parte superior) */}
       <div className={clsx(
         'h-1.5 w-full',

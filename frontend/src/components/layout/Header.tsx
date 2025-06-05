@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, HelpCircle, UserCircle, User, Shield } from 'lucide-react';
+import { Bell, HelpCircle, UserCircle, User, Shield, BellOff } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
 import { EmailVerificationAlert } from '../auth/EmailVerificationAlert';
@@ -98,9 +99,14 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
         <button 
           className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 relative"
           onClick={() => toggleNotifications(true)}
+          aria-label="Notificaciones"
         >
-          <Bell size={20} />
-          <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+          {useNotification().notificationsEnabled ? <Bell size={20} /> : <BellOff size={20} />}
+          {useNotification().unreadCount > 0 && (
+            <span className="absolute top-0 right-0 flex items-center justify-center min-w-[18px] h-[18px] text-xs text-white font-medium rounded-full bg-red-500 transform translate-x-1 -translate-y-1 px-1">
+              {useNotification().unreadCount > 99 ? '99+' : useNotification().unreadCount}
+            </span>
+          )}
         </button>
         
         <button className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100">

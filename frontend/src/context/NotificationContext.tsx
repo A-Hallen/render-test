@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getToken, onMessage, isSupported } from 'firebase/messaging';
 import { messaging, vapidKey } from '../firebase/firebaseConfig';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import NotificationService from '../services/NotificationService';
 
 interface NotificationContextType {
   notifications: NotificationMeta[];
+  unreadCount: number;
   addNotification: (notification: NotificationPayload) => void;
   markNotificationAsRead: (id: string) => void;
   clearAllNotifications: () => void;
@@ -20,6 +21,10 @@ interface NotificationContextType {
   requestNotificationPermission: () => Promise<boolean>;
   deviceId: string | null;
   markAllNotificationsAsRead: () => void;
+  loadMoreNotifications: () => Promise<boolean>;
+  isLoading: boolean;
+  hasMoreNotifications: boolean;
+  error: string | null;
 }
 
 export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -35,6 +40,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasMoreNotifications, setHasMoreNotifications] = useState<boolean>(true);
+  const [lastTimestamp, setLastTimestamp] = useState<number | null>(null);
+  const [pageSize] = useState<number>(10); // Número de notificaciones por página
   
   // Obtener o generar un ID de dispositivo único y persistente
   useEffect(() => {
@@ -177,6 +187,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Añadir a la lista de notificaciones
     setNotifications(prev => [newNotification, ...prev]);
     
+    // Actualizar el contador de notificaciones no leídas
+    setUnreadCount(prev => prev + 1);
+    
     // Mostrar toast si no está abierto el centro de notificaciones
     if (!showNotifications) {
       toast.custom(
@@ -253,6 +266,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
     
+    // Actualizar el contador de notificaciones no leídas
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    
     // Si el usuario está autenticado, actualizar en el backend
     if (isAuthenticated && user && notification.userId) {
       try {
@@ -267,6 +283,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const clearAllNotifications = async () => {
     // Actualizar estado local
     setNotifications([]);
+    setUnreadCount(0);
     
     // Si el usuario está autenticado, eliminar todas las notificaciones en el backend
     if (isAuthenticated && user) {
@@ -282,6 +299,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const markAllNotificationsAsRead = async () => {
     // Actualizar estado local
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
     
     // Si el usuario está autenticado, marcar todas como leídas en el backend
     if (isAuthenticated && user) {
@@ -312,13 +330,93 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [isAuthenticated, user]);
   
+  // Escuchar el evento de actualización de notificaciones
+  useEffect(() => {
+    const handleRefreshNotifications = (event: Event) => {
+      const customEvent = event as CustomEvent<{notifications: NotificationMeta[]}>;
+      if (customEvent.detail && customEvent.detail.notifications) {
+        setNotifications(customEvent.detail.notifications);
+        
+        // Actualizar contador de notificaciones no leídas
+        const unreadNotifications = customEvent.detail.notifications.filter(n => !n.read).length;
+        setUnreadCount(unreadNotifications);
+        
+        // Actualizar estado de paginación
+        if (customEvent.detail.notifications.length > 0) {
+          setLastTimestamp(customEvent.detail.notifications[customEvent.detail.notifications.length - 1].timestamp);
+        }
+        setHasMoreNotifications(customEvent.detail.notifications.length === pageSize);
+      }
+    };
+    
+    window.addEventListener('refreshNotifications', handleRefreshNotifications);
+    
+    return () => {
+      window.removeEventListener('refreshNotifications', handleRefreshNotifications);
+    };
+  }, [pageSize]);
+  
+  // Estado para manejar errores de carga
+  const [error, setError] = useState<string | null>(null);
+  
   // Función para cargar notificaciones del usuario desde el backend
   const loadUserNotifications = async (userId: string) => {
     try {
-      const userNotifications = await NotificationService.getUserNotifications(userId);
+      setIsLoading(true);
+      setError(null); // Limpiar errores anteriores
+      
+      const userNotifications = await NotificationService.getUserNotifications(userId, {
+        limit: pageSize
+      });
+      
       setNotifications(userNotifications);
-    } catch (error) {
+      setHasMoreNotifications(userNotifications.length === pageSize);
+      
+      if (userNotifications.length > 0) {
+        setLastTimestamp(userNotifications[userNotifications.length - 1].timestamp);
+      }
+      
+      // Actualizar contador de notificaciones no leídas
+      const unreadNotifications = userNotifications.filter(n => !n.read).length;
+      setUnreadCount(unreadNotifications);
+    } catch (error: any) {
       console.error('Error al cargar notificaciones del usuario:', error);
+      setError(error?.message || 'Error al cargar notificaciones');
+      toast.error('No se pudieron cargar las notificaciones');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Función para cargar más notificaciones (paginación)
+  const loadMoreNotifications = async (): Promise<boolean> => {
+    if (!user || !lastTimestamp || !hasMoreNotifications || isLoading) return false;
+    
+    try {
+      setIsLoading(true);
+      setError(null); // Limpiar errores anteriores
+      
+      const moreNotifications = await NotificationService.getUserNotifications(user.uid, {
+        limit: pageSize,
+        endDate: lastTimestamp - 1 // Excluir la última notificación ya cargada
+      });
+      
+      if (moreNotifications.length > 0) {
+        setNotifications(prev => [...prev, ...moreNotifications]);
+        setLastTimestamp(moreNotifications[moreNotifications.length - 1].timestamp);
+        setHasMoreNotifications(moreNotifications.length === pageSize);
+        return true;
+      } else {
+        setHasMoreNotifications(false);
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Error al cargar más notificaciones:', error);
+      setError(error?.message || 'Error al cargar más notificaciones');
+      toast.error('No se pudieron cargar más notificaciones');
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -331,38 +429,83 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [isAuthenticated, user, fcmToken, deviceId]);
   
+  // Función para manejar mensajes FCM (extraída para poder reutilizarla)
+  const handleFCMMessage = useCallback((payload: any) => {
+    console.log('Mensaje FCM recibido:', payload);
+    
+    // Extraer datos de la notificación
+    const { notification, data } = payload;
+    
+    if (notification) {
+      // Crear una notificación en el sistema
+      addNotification({
+        title: notification.title || 'Nueva notificación',
+        body: notification.body || '',
+        type: (data?.type as any) || 'info',
+        data: data || {},
+        userId: user?.uid
+      });
+    }
+  }, [user]);
+
   // Configurar el listener de mensajes FCM cuando el componente se monta
   useEffect(() => {
     if (!messaging) return;
     
     // Configurar el listener para mensajes en primer plano
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log('Mensaje recibido en primer plano:', payload);
-      
-      // Extraer datos de la notificación
-      const { notification, data } = payload;
-      
-      if (notification) {
-        // Crear una notificación en el sistema
-        addNotification({
-          title: notification.title || 'Nueva notificación',
-          body: notification.body || '',
-          type: (data?.type as any) || 'info',
-          data: data || {}
-        });
-      }
-    });
+    const unsubscribe = onMessage(messaging, handleFCMMessage);
     
     // Limpiar el listener cuando el componente se desmonta
     return () => {
       unsubscribe();
     };
-  }, [messaging]);
+  }, [messaging, handleFCMMessage]);
+  
+  // Registrar el service worker para notificaciones en segundo plano
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(registration => {
+          console.log('Service Worker registrado con éxito:', registration.scope);
+          
+          // Escuchar mensajes del service worker
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data?.type === 'NOTIFICATION_RECEIVED') {
+              handleFCMMessage(event.data.payload);
+            } else if (event.data?.type === 'NOTIFICATION_CLICKED') {
+              // Cuando se hace clic en una notificación en segundo plano
+              console.log('Notificación clickeada en segundo plano:', event.data.payload);
+              
+              // Refrescar las notificaciones cuando se hace clic en una notificación
+              if (isAuthenticated && user) {
+                loadUserNotifications(user.uid);
+              }
+              
+              // Si la notificación tiene un ID, marcarla como leída
+              if (event.data.payload?.notificationId) {
+                markNotificationAsRead(event.data.payload.notificationId);
+              }
+            }
+          });
+          
+          // Verificar si hay mensajes pendientes en el service worker
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'CHECK_PENDING_NOTIFICATIONS'
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error al registrar el Service Worker:', error);
+        });
+    }
+  }, [handleFCMMessage, isAuthenticated, user, markNotificationAsRead]);
   
   return (
     <NotificationContext.Provider
       value={{
         notifications,
+        unreadCount,
         addNotification,
         markNotificationAsRead,
         clearAllNotifications,
@@ -372,7 +515,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         notificationsEnabled,
         requestNotificationPermission,
         deviceId,
-        markAllNotificationsAsRead
+        markAllNotificationsAsRead,
+        loadMoreNotifications,
+        isLoading,
+        hasMoreNotifications,
+        error
       }}
     >
       {children}

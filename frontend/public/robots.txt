@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Rutas principales
+Allow: /dashboard
+Allow: /reportes
+Allow: /indicadores
+Allow: /captaciones
+Allow: /cartera
+
+# Bloquear rutas privadas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+Disallow: /auth/reset-password
+
+# Sitemap
+Sitemap: https://ai-asistente.com/sitemap.xml

@@ -302,43 +302,109 @@ export const ApexIndicadoresChart = () => {
         }
     };
 
+    // Componente de Skeleton Loader para el gráfico con dimensiones exactas
+    const ChartSkeletonLoader = () => {
+        return (
+            // Contenedor con altura fija exactamente igual a la del gráfico real (350px)
+            <div className="h-[350px] flex flex-col">
+                {/* Área de leyenda */}
+                <div className="flex justify-center py-2">
+                    <div className="flex space-x-4">
+                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                </div>
+                
+                {/* Área del gráfico - ocupa todo el espacio restante */}
+                <div className="flex-grow w-full relative">
+                    {/* Eje Y */}
+                    <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col justify-between py-4">
+                        <div className="h-3 w-8 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-6 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-7 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-5 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    
+                    {/* Líneas del gráfico */}
+                    <div className="absolute left-12 right-4 top-4 bottom-12">
+                        <div className="h-1 w-full bg-gray-100 absolute top-1/4 animate-pulse"></div>
+                        <div className="h-1 w-full bg-gray-100 absolute top-2/4 animate-pulse"></div>
+                        <div className="h-1 w-full bg-gray-100 absolute top-3/4 animate-pulse"></div>
+                        
+                        {/* Líneas de datos simuladas */}
+                        <div className="absolute top-0 left-0 right-0 bottom-0">
+                            <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <path d="M0,50 C20,40 40,60 60,30 S80,50 100,20" stroke="#E2E8F0" strokeWidth="2" fill="none" className="animate-pulse" />
+                                <path d="M0,70 C20,65 40,80 60,60 S80,70 100,50" stroke="#CBD5E0" strokeWidth="2" fill="none" className="animate-pulse" />
+                                <path d="M0,30 C20,45 40,25 60,40 S80,20 100,40" stroke="#EDF2F7" strokeWidth="2" fill="none" className="animate-pulse" />
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    {/* Eje X */}
+                    <div className="absolute left-12 right-4 bottom-0 h-10 flex justify-between items-center">
+                        <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // Renderizar diferentes estados
-    const renderContent = () => {
-        if (isLoading) {
-            return (
-                <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-            );
-        }
-        
-        if (error) {
-            return (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                    <p className="text-red-600 font-medium">Error</p>
-                    <p className="text-red-500">{error}</p>
-                    <button 
-                        onClick={() => onFilterChange()} 
-                        className="mt-3 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
-                    >
-                        Reintentar
-                    </button>
-                </div>
-            );
-        }
-        
+    const renderChart = () => {
         if (!data || !data.indicadoresCalculados || data.indicadoresCalculados.length === 0) {
             return (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                    <p className="text-yellow-700">No hay datos disponibles para el período seleccionado</p>
+                // Contenedor con altura fija exacta
+                <div className="h-[350px] bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-center">
+                    <div className="text-center px-4">
+                        <p className="text-yellow-700 mb-2">No hay datos disponibles para el período seleccionado</p>
+                        <p className="text-sm text-yellow-600">Intenta seleccionar otra oficina o período de tiempo</p>
+                    </div>
                 </div>
             );
         }
         
         const series = prepararSeries();
         
+        // Contenedor con altura fija exacta
         return (
+            <div className="h-[350px]">
+                <ReactApexChart 
+                    options={chartOptions}
+                    series={series}
+                    type={chartType}
+                    height={350}
+                />
+            </div>
+        );
+    };
+    
+    // Renderizar mensaje de error
+    const renderError = () => {
+        if (!error) return null;
+        
+        return (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-center">
+                <p className="text-red-600 text-sm">{error}</p>
+                <button 
+                    onClick={() => onFilterChange()} 
+                    className="mt-2 px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
+                >
+                    Reintentar
+                </button>
+            </div>
+        );
+    };
+        
+    return (
+        <div className="grid grid-cols-1 gap-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 transition-all duration-200 hover:shadow-md">
+                {/* Header y controles - siempre visibles independientemente del estado */}
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h3 className="text-base font-semibold text-gray-800">Indicadores Financieros</h3>
@@ -346,7 +412,7 @@ export const ApexIndicadoresChart = () => {
                     </div>
                     
                     <div className="flex items-center space-x-3">
-                        {/* Selector de oficina */}
+                        {/* Selector de oficina - siempre disponible */}
                         <div className="relative">
                             <select
                                 value={oficinaSeleccionada?.codigo || ''}
@@ -355,12 +421,17 @@ export const ApexIndicadoresChart = () => {
                                     if (oficina) setOficinaSeleccionada(oficina);
                                 }}
                                 className="appearance-none pl-4 pr-10 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                disabled={oficinas.length === 0} // Solo deshabilitado si no hay oficinas disponibles
                             >
-                                {oficinas.map(oficina => (
-                                    <option key={oficina.codigo} value={oficina.codigo}>
-                                        {oficina.nombre}
-                                    </option>
-                                ))}
+                                {oficinas.length > 0 ? (
+                                    oficinas.map(oficina => (
+                                        <option key={oficina.codigo} value={oficina.codigo}>
+                                            {oficina.nombre}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="">Cargando oficinas...</option>
+                                )}
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -369,7 +440,7 @@ export const ApexIndicadoresChart = () => {
                             </div>
                         </div>
                         
-                        {/* Selector de periodo */}
+                        {/* Selector de periodo - siempre disponible */}
                         <div className="relative">
                             <select
                                 value={periodoSeleccionado}
@@ -388,12 +459,13 @@ export const ApexIndicadoresChart = () => {
                             </div>
                         </div>
                         
-                        {/* Selector de tipo de gráfico */}
+                        {/* Selector de tipo de gráfico - siempre disponible */}
                         <div className="relative">
                             <select 
                                 value={chartType} 
                                 onChange={(e) => setChartType(e.target.value as any)}
                                 className="appearance-none pl-4 pr-10 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                disabled={isLoading || !data} // Solo deshabilitado durante la carga o si no hay datos
                             >
                                 <option value="line">Línea</option>
                                 <option value="bar">Barras</option>
@@ -407,33 +479,35 @@ export const ApexIndicadoresChart = () => {
                             </div>
                         </div>
                         
+                        {/* Botón de actualizar - siempre disponible */}
                         <button 
                             onClick={() => onFilterChange()}
                             className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                             title="Actualizar datos"
+                            disabled={isLoading} // Solo deshabilitado durante la carga
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                         </button>
                     </div>
                 </div>
                 
+                {/* Contenedor con altura fija para evitar cambios en el layout */}
                 <div className="h-[350px]">
-                    <ReactApexChart 
-                        options={chartOptions}
-                        series={series}
-                        type={chartType}
-                        height={350}
-                    />
+                    {/* Mostrar mensaje de error si existe */}
+                    {renderError()}
+                    
+                    {/* Contenido principal - cambia según el estado */}
+                    {isLoading ? (
+                        // Skeleton loader durante la carga
+                        <ChartSkeletonLoader />
+                    ) : (
+                        // Gráfico o mensaje de no hay datos
+                        renderChart()
+                    )}
                 </div>
             </div>
-        );
-    };
-
-    return (
-        <div className="grid grid-cols-1 gap-6">
-            {renderContent()}
         </div>
     );
 }

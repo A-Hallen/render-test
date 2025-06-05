@@ -10,12 +10,9 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Panel de Control</h1>
-        <p className="text-gray-600">
-          Resumen de indicadores financieros al 30 de junio, 2025
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex flex-wrap gap-4">
         <CarteraCreditoCard codigoOficina="CNS" />
         <CaptacionesCard tipo="vista" />
         <CaptacionesCard tipo="plazo" />
