@@ -139,7 +139,9 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
       if (userData.photoURL) authUpdateData.photoURL = userData.photoURL;
       if (userData.disabled !== undefined) authUpdateData.disabled = userData.disabled;
       
-      await this.auth.updateUser(uid, authUpdateData);
+      // Usar admin.auth() directamente para asegurar que se actualice en Firebase Authentication
+      await admin.auth().updateUser(uid, authUpdateData);
+      console.log(`Usuario actualizado en Firebase Authentication: ${uid}`, authUpdateData);
       
       // Actualizar en Firestore
       const updateData = {
@@ -148,6 +150,7 @@ export class AuthRepository extends BaseFirebaseRepository<User> {
       };
       
       await this.collection.doc(uid).update(updateData);
+      console.log(`Usuario actualizado en Firestore: ${uid}`, updateData);
       
       // Si se actualizó el rol, actualizar también los claims
       if (userData.role) {
