@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ShieldCheck, BarChart2, Users, CreditCard, ChevronRight, ArrowRight } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ShieldCheck, BarChart2, Users, CreditCard, ArrowRight } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -242,17 +242,6 @@ export const Login: React.FC = () => {
               <a href="#contact" className="font-medium text-blue-600 hover:text-blue-500 hover:underline transition-all">
                 Contacta al administrador
               </a>
-            </div>
-          </div>
-
-          <div className="mt-10 text-center">
-            <div className="inline-flex items-center justify-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm border border-gray-100">
-              <div className="w-4 h-4 rounded-full bg-green-500"></div>
-              <p className="text-xs font-medium text-gray-600">Sistema en línea y operativo</p>
-            </div>
-            <div className="mt-4 text-xs text-gray-400">
-              <p>&copy; {new Date().getFullYear()} FinCoop AI. Sistema de gestión financiera v2.4</p>
-              <p className="mt-1">Cumplimiento PCI DSS Nivel 1 | ISO 27001 Certified</p>
             </div>
           </div>
         </div>
