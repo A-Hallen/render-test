@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Calendar, Shield, RefreshCw, User as UserIcon } from 'lucide-react';
+import { Calendar, Mail, User as UserIcon, Shield, Clock, RefreshCw } from 'lucide-react';
 import { User } from '../../types/auth';
 
 interface ProfileViewProps {
@@ -9,69 +9,116 @@ interface ProfileViewProps {
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({ user, formatDate, getRoleName }) => {
+  if (!user) return <div className="py-8 text-center text-gray-500">Cargando información del usuario...</div>;
+
   return (
-    <div className="px-6 py-4">
-      {/* Tarjetas de información en una disposición más compacta */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Tarjeta de correo electrónico */}
-        <div className="flex items-center bg-gray-50 p-3 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-            <Mail size={16} className="text-blue-600" />
+    <div className="mt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Columna izquierda: Información personal */}
+        <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-medium text-gray-800">Información personal</h2>
           </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium">Correo electrónico</p>
-            <p className="text-sm text-gray-800">{user?.email}</p>
-          </div>
-        </div>
-
-        {/* Tarjeta de rol */}
-        <div className="flex items-center bg-gray-50 p-3 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
-            <Shield size={16} className="text-indigo-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium">Rol</p>
-            <p className="text-sm text-gray-800">{user?.role ? getRoleName(user.role) : 'No definido'}</p>
-          </div>
-        </div>
-
-        {/* Tarjeta de fecha de registro */}
-        <div className="flex items-center bg-gray-50 p-3 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
-            <Calendar size={16} className="text-green-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium">Fecha de registro</p>
-            <p className="text-sm text-gray-800">{user?.createdAt ? formatDate(user.createdAt) : 'No disponible'}</p>
-          </div>
-        </div>
-
-        {/* Tarjeta de estado */}
-        <div className="flex items-center bg-gray-50 p-3 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center mr-3">
-            <UserIcon size={16} className="text-amber-600" />
-          </div>
-          <div className="flex items-center">
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Estado</p>
-              <p className="text-sm text-gray-800">{user?.disabled ? 'Inactivo' : 'Activo'}</p>
+          <div className="p-6 space-y-5">
+            {/* Nombre completo */}
+            {user.displayName && (
+              <div className="flex">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-4">
+                  <UserIcon size={16} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Nombre completo</p>
+                  <p className="text-gray-800 font-medium">{user.displayName}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Email */}
+            <div className="flex">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-4">
+                <Mail size={16} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Email</p>
+                <p className="text-gray-800 font-medium">{user.email}</p>
+              </div>
             </div>
-            <div className="ml-3 flex items-center">
-              <span className={`h-2 w-2 rounded-full ${user?.disabled ? 'bg-red-500' : 'bg-green-500'} mr-1`}></span>
-              <span className="text-xs text-gray-600 font-medium">{user?.disabled ? 'Inactivo' : 'En línea'}</span>
+            
+            {/* Estado */}
+            <div className="flex">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-4">
+                <Shield size={16} className="text-blue-600" />
+              </div>
+              <div className="flex items-center">
+                <div>
+                  <p className="text-sm text-gray-500">Estado</p>
+                  <p className="text-gray-800 font-medium">{user?.disabled ? 'Inactivo' : 'Activo'}</p>
+                </div>
+                <div className="ml-3 flex items-center">
+                  <span className={`h-2 w-2 rounded-full ${user?.disabled ? 'bg-red-500' : 'bg-green-500'} mr-1`}></span>
+                  <span className="text-xs text-gray-600">{user?.disabled ? 'Inactivo' : 'En línea'}</span>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+        
+        {/* Columna derecha: Información de cuenta */}
+        <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+          <div className="bg-gradient-to-r from-green-50 to-teal-50 px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-medium text-gray-800">Información de cuenta</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            {/* Fecha de creación */}
+            {user.createdAt && (
+              <div className="flex">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-4">
+                  <Calendar size={16} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Fecha de registro</p>
+                  <p className="text-gray-800 font-medium">{formatDate(user.createdAt)}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Última actualización */}
+            {user.updatedAt && (
+              <div className="flex">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-4">
+                  <Clock size={16} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Última actualización</p>
+                  <p className="text-gray-800 font-medium">{formatDate(user.updatedAt)}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Rol */}
+            {user.role && (
+              <div className="flex">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-4">
+                  <Shield size={16} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Rol</p>
+                  <p className="text-gray-800 font-medium">{getRoleName(user.role)}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Botón para recargar datos */}
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-end mt-6">
         <button 
-          className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+          className="flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
           onClick={() => window.location.reload()}
         >
-          <RefreshCw size={14} className="mr-1.5" />
-          Actualizar
+          <RefreshCw size={14} className="mr-2" />
+          Actualizar datos
         </button>
       </div>
     </div>

@@ -23,23 +23,16 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
     error
   } = useNotification();
   
-  // Obtener usuario y estado de autenticación del AuthContext
   const { user, isAuthenticated } = useAuth();
   
-  // IMPORTANTE: Todos los hooks de estado deben declararse al inicio del componente
-  // Estado para manejar la animación de entrada/salida
-  // Inicializamos isRendered con el valor de isOpen para que esté sincronizado desde el principio
   const [isVisible, setIsVisible] = useState(isOpen);
   const [isRendered, setIsRendered] = useState(isOpen);
-  // Estado para animar la eliminación de notificaciones
   const [notificationToRemove, setNotificationToRemove] = useState<string | null>(null);
-  // Estado local para manejar errores de carga en el componente
   const [localError, setLocalError] = useState<string | null>(null);
   
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
   
-  // Función para cargar más notificaciones cuando se llega al final de la lista
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [entry] = entries;
     if (entry.isIntersecting && hasMoreNotifications && !isLoading) {
@@ -47,36 +40,39 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
     }
   }, [hasMoreNotifications, isLoading, loadMoreNotifications]);
   
-  // Refrescar notificaciones cuando se abre el centro de notificaciones
   useEffect(() => {
-    // Solo refrescar si el panel está abierto y el usuario está autenticado
-    if (isOpen && isAuthenticated && user) {
-      setLocalError(null); // Limpiar errores locales al abrir
+    if (isOpen) {
+      setLocalError(null);
       
-      // Importamos dinámicamente para evitar dependencias circulares
-      import('../../services/NotificationService').then(({ default: NotificationService }) => {
-        // Establecer loading
-        const refreshNotifications = async () => {
-          try {
-            const refreshedNotifications = await NotificationService.getUserNotifications(user.uid, { limit: 10 });
-            // Actualizar el contexto con las notificaciones refrescadas
-            // Esto se hace a través de un evento personalizado para evitar modificar el contexto directamente
-            window.dispatchEvent(new CustomEvent('refreshNotifications', { 
-              detail: { notifications: refreshedNotifications } 
-            }));
-            setLocalError(null);
-          } catch (error: any) {
-            console.error('Error al refrescar notificaciones:', error);
-            setLocalError(error?.message || 'Error al cargar notificaciones');
-          }
-        };
+      if ('Notification' in window) {
+        const actualPermission = Notification.permission === 'granted';
         
-        refreshNotifications();
-      });
+        if (actualPermission !== notificationsEnabled) {
+          window.dispatchEvent(new CustomEvent('checkNotificationPermission'));
+        }
+      }
+      
+      if (isAuthenticated && user) {
+        import('../../services/NotificationService').then(({ default: NotificationService }) => {
+          const refreshNotifications = async () => {
+            try {
+              const refreshedNotifications = await NotificationService.getUserNotifications(user.uid, { limit: 10 });
+              window.dispatchEvent(new CustomEvent('refreshNotifications', { 
+                detail: { notifications: refreshedNotifications } 
+              }));
+              setLocalError(null);
+            } catch (error: any) {
+              console.error('Error al refrescar notificaciones:', error);
+              setLocalError(error?.message || 'Error al cargar notificaciones');
+            }
+          };
+          
+          refreshNotifications();
+        });
+      }
     }
-  }, [isOpen, isAuthenticated, user]);
+  }, [isOpen, isAuthenticated, user, notificationsEnabled]);
   
-  // Configurar el observer para la paginación infinita
   useEffect(() => {
     if (!isOpen) return;
     
@@ -99,26 +95,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
     };
   }, [isOpen, handleObserver, hasMoreNotifications]);
   
-  // Configuración de la animación de entrada/salida ya inicializada arriba
-  
-  // Manejar la animación de entrada y salida
   useEffect(() => {
     if (isOpen) {
-      // Primero aseguramos que el componente esté en el DOM
       setIsRendered(true);
-      // Usamos requestAnimationFrame para garantizar que el navegador haya procesado el cambio de DOM
-      // antes de iniciar la animación, esto es más confiable que setTimeout
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
+      setTimeout(() => setIsVisible(true), 10);
     } else {
-      // Al cerrar, primero ocultamos con la animación
       setIsVisible(false);
-      // Luego esperamos a que termine la animación antes de quitar del DOM
-      const timer = setTimeout(() => setIsRendered(false), 300); // 300ms debe coincidir con la duración de la transición
-      return () => clearTimeout(timer);
+      setTimeout(() => setIsRendered(false), 300);
     }
   }, [isOpen]);
   
@@ -160,9 +143,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
     });
   };
   
-  // La eliminación de notificaciones con animación usa el estado notificationToRemove ya definido arriba
-  
-  // Función para manejar la eliminación con animación
   const handleMarkAsRead = (id: string) => {
     setNotificationToRemove(id);
     setTimeout(() => {
@@ -199,7 +179,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
       </div>
       
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        {/* Mostrar mensaje de error si existe */}
         {(error || localError) && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
             <div className="flex items-center">

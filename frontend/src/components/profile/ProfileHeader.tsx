@@ -20,104 +20,105 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   imagePreview
 }) => {
   return (
-    <div className="relative">
-      {/* Banner de fondo con gradiente más compacto */}
-      <div className="relative h-32 md:h-40 bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600">
-        {/* Patrón decorativo sutil */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-12 -left-12 w-48 h-48 rounded-full bg-white opacity-20"></div>
-          <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-white opacity-15"></div>
-        </div>
-        
+    <div className="mb-8">
+      {/* Encabezado con diseño minimalista */}
+      <div className="relative border-b border-gray-100 pb-8">
         {/* Botón de edición */}
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-0 right-0">
           <button 
             onClick={toggleEditMode}
             className={`
-              flex items-center justify-center
-              w-9 h-9 rounded-full shadow-md
-              transition-all duration-200
+              flex items-center px-3 py-1.5 rounded-md
+              transition-colors
               ${editMode 
-                ? 'bg-white text-red-500 hover:bg-red-50' 
-                : 'bg-white text-blue-600 hover:bg-blue-50'}
+                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}
             `}
             title={editMode ? "Cancelar edición" : "Editar perfil"}
             aria-label={editMode ? "Cancelar edición" : "Editar perfil"}
           >
-            {editMode ? <X size={16} /> : <Edit size={16} />}
+            {editMode ? (
+              <>
+                <X size={16} className="mr-1.5" />
+                <span className="text-sm">Cancelar</span>
+              </>
+            ) : (
+              <>
+                <Edit size={16} className="mr-1.5" />
+                <span className="text-sm">Editar</span>
+              </>
+            )}
           </button>
         </div>
-      </div>
-      
-      {/* Avatar del usuario con diseño más compacto */}
-      <div className="flex items-center px-6 py-3">
-        <div className="relative group mr-4">
-          <div className="
-            h-20 w-20 
-            rounded-full bg-white 
-            shadow-md ring-2 ring-white
-            -mt-10
-          ">
-            {imagePreview ? (
-              <img 
-                src={imagePreview} 
-                alt={user?.displayName || 'Vista previa'} 
-                className="h-full w-full rounded-full object-cover" 
-              />
-            ) : photoURL ? (
-              <img 
-                src={photoURL} 
-                alt={user?.displayName || 'Usuario'} 
-                className="h-full w-full rounded-full object-cover" 
-              />
-            ) : (
-              <div className="h-full w-full rounded-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-                <UserCircle size={50} className="text-blue-600" />
+        
+        {/* Información del usuario con diseño elegante */}
+        <div className="flex items-center">
+          {/* Avatar del usuario */}
+          <div className="relative group mr-6">
+            <div className="h-24 w-24 rounded-full bg-white border border-gray-200 overflow-hidden">
+              {imagePreview ? (
+                <img 
+                  src={imagePreview} 
+                  alt={user?.displayName || 'Vista previa'} 
+                  className="h-full w-full object-cover" 
+                />
+              ) : photoURL ? (
+                <img 
+                  src={photoURL} 
+                  alt={user?.displayName || 'Usuario'} 
+                  className="h-full w-full object-cover" 
+                />
+              ) : (
+                <div className="h-full w-full bg-gray-50 flex items-center justify-center">
+                  <UserCircle size={48} className="text-gray-400" />
+                </div>
+              )}
+            </div>
+            
+            {/* Botón de edición de imagen */}
+            {editMode && (
+              <div className="
+                absolute inset-0 
+                flex items-center justify-center 
+                opacity-0 group-hover:opacity-100 
+                transition-all duration-200
+              ">
+                <div className="
+                  bg-black bg-opacity-50
+                  rounded-full h-full w-full 
+                  flex items-center justify-center
+                ">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 bg-white text-gray-800 rounded-full hover:bg-gray-100 transition-colors"
+                    title="Cambiar imagen"
+                    aria-label="Cambiar imagen de perfil"
+                  >
+                    <Camera size={16} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
           
-          {/* Botón de edición de imagen */}
-          {editMode && (
-            <div className="
-              absolute inset-0 
-              flex items-center justify-center 
-              opacity-0 group-hover:opacity-100 
-              transition-all duration-200
-            ">
-              <div className="
-                bg-black bg-opacity-60
-                rounded-full h-full w-full 
-                flex items-center justify-center
-              ">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="
-                    p-2 bg-blue-600 text-white 
-                    rounded-full
-                    hover:bg-blue-700
-                    transition-colors
-                  "
-                  title="Cambiar imagen"
-                  aria-label="Cambiar imagen de perfil"
-                >
-                  <Camera size={16} />
-                </button>
-              </div>
+          {/* Información básica del usuario */}
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-800 mb-1">{user?.displayName || 'Usuario'}</h1>
+            <p className="text-gray-500 mb-2">{user?.email}</p>
+            <div className="flex items-center space-x-3">
+              {user?.role && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                  {user.role}
+                </span>
+              )}
+              {user?.createdAt && (
+                <span className="text-xs text-gray-500">
+                  Miembro desde {new Date(user.createdAt).toLocaleDateString()}
+                </span>
+              )}
             </div>
-          )}
-        </div>
-        
-        {/* Información básica del usuario */}
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">{user?.displayName || 'Usuario'}</h2>
-          <p className="text-sm text-gray-500">{user?.email}</p>
-          {user?.role && (
-            <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {user.role}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { ProfileView } from '../components/profile/ProfileView';
 import { useProfileState } from '../hooks/useProfileState';
@@ -33,42 +33,76 @@ const Profile: React.FC = () => {
     formatDate,
     getRoleName
   } = useProfileState();
+  
+  // Estado para controlar las animaciones
+  const [isVisible, setIsVisible] = useState(true);
+  const [currentView, setCurrentView] = useState<'edit' | 'view'>(editMode ? 'edit' : 'view');
+  
+  // Efecto para manejar las transiciones cuando cambia el modo de edición
+  useEffect(() => {
+    if (editMode !== (currentView === 'edit')) {
+      // Primero ocultamos la vista actual
+      setIsVisible(false);
+      
+      // Después de un breve retraso, cambiamos la vista y la mostramos
+      const timer = setTimeout(() => {
+        setCurrentView(editMode ? 'edit' : 'view');
+        setIsVisible(true);
+      }, 300); // 300ms para la transición de salida
+      
+      return () => clearTimeout(timer);
+    }
+  }, [editMode, currentView]);
 
   return (
-    <div className="container mx-auto max-w-6xl">
-      <div className="bg-white overflow-hidden rounded-lg shadow-md">
-        {/* Encabezado con banner y foto de perfil */}
-        <ProfileHeader
-          user={user}
-          photoURL={formData.photoURL}
-          editMode={editMode}
-          toggleEditMode={toggleEditMode}
-          fileInputRef={fileInputRef}
-          imagePreview={imagePreview}
-        />
+    <div className="max-w-5xl mx-auto">
+      {/* Encabezado con foto de perfil */}
+      <ProfileHeader
+        user={user}
+        photoURL={formData.photoURL}
+        editMode={editMode}
+        toggleEditMode={toggleEditMode}
+        fileInputRef={fileInputRef}
+        imagePreview={imagePreview}
+      />
+      
+      {/* Contenido del perfil con animación */}
+      <div className="relative min-h-[400px]">
+        {/* Vista de edición */}
+        <div 
+          className={`absolute w-full transition-all duration-300 ease-in-out ${currentView === 'edit' ? '' : 'hidden'} 
+                     ${isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform -translate-y-4'}`}
+        >
+          {currentView === 'edit' && (
+            <ProfileEdit
+              formData={formData}
+              handleChange={handleChange}
+              handleSubmit={handleSubmit}
+              toggleEditMode={toggleEditMode}
+              loading={loading}
+              fileInputRef={fileInputRef}
+              handleFileChange={handleFileChange}
+              imagePreview={imagePreview}
+              handleClearImage={handleClearImage}
+              handleImageUpload={handleImageUpload}
+              uploadingImage={uploadingImage}
+            />
+          )}
+        </div>
         
-        {/* Contenido del perfil (vista o edición) */}
-        {editMode ? (
-          <ProfileEdit
-            formData={formData}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            toggleEditMode={toggleEditMode}
-            loading={loading}
-            fileInputRef={fileInputRef}
-            handleFileChange={handleFileChange}
-            imagePreview={imagePreview}
-            handleClearImage={handleClearImage}
-            handleImageUpload={handleImageUpload}
-            uploadingImage={uploadingImage}
-          />
-        ) : (
-          <ProfileView
-            user={user}
-            formatDate={formatDate}
-            getRoleName={getRoleName}
-          />
-        )}
+        {/* Vista de visualización */}
+        <div 
+          className={`absolute w-full transition-all duration-300 ease-in-out ${currentView === 'view' ? '' : 'hidden'}
+                     ${isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-4'}`}
+        >
+          {currentView === 'view' && (
+            <ProfileView
+              user={user}
+              formatDate={formatDate}
+              getRoleName={getRoleName}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

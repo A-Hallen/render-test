@@ -61,6 +61,64 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
   
+  // Verificar el estado actual de los permisos de notificaciones
+  const checkNotificationPermission = useCallback(async () => {
+    try {
+      // Verificar si el navegador soporta notificaciones
+      if (!('Notification' in window)) {
+        setNotificationsEnabled(false);
+        return false;
+      }
+      
+      // Verificar el estado actual del permiso
+      const currentPermission = Notification.permission;
+      const isEnabled = currentPermission === 'granted';
+      
+      // Actualizar el estado
+      setNotificationsEnabled(isEnabled);
+      
+      // Si el permiso está concedido pero no tenemos token, intentar obtenerlo
+      if (isEnabled && !fcmToken && messaging) {
+        const isFCMSupported = await isSupported();
+        
+        if (isFCMSupported) {
+          try {
+            const currentToken = await getToken(messaging, { vapidKey });
+            if (currentToken) {
+              setFcmToken(currentToken);
+              localStorage.setItem('fcmToken', currentToken);
+            }
+          } catch (error) {
+            console.error('Error al recuperar token FCM:', error);
+          }
+        }
+      }
+      
+      return isEnabled;
+    } catch (error) {
+      console.error('Error al verificar permisos de notificación:', error);
+      return false;
+    }
+  }, [fcmToken]);
+  
+  // Verificar permisos solo cuando sea necesario
+  useEffect(() => {
+    // Verificar permisos al inicio
+    checkNotificationPermission();
+    
+    // Escuchar evento para verificar permisos (disparado desde NotificationCenter)
+    const handleCheckPermission = () => {
+      checkNotificationPermission();
+    };
+    
+    window.addEventListener('checkNotificationPermission', handleCheckPermission);
+    
+    // Limpiar listener
+    return () => {
+      window.removeEventListener('checkNotificationPermission', handleCheckPermission);
+    };
+  }, [checkNotificationPermission]);
+  
   // Función para enviar el token FCM al backend
   const sendTokenToBackend = async (token: string, userId?: string) => {
     try {
@@ -81,6 +139,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Función para solicitar permiso para notificaciones y obtener el token FCM
   const requestNotificationPermission = async (): Promise<boolean> => {
     try {
+      // Verificar el estado actual del permiso primero
+      if (Notification.permission === 'granted') {
+        // Ya tenemos permiso, solo verificamos el token
+        if (fcmToken) {
+          // Ya tenemos token, todo está configurado
+          setNotificationsEnabled(true);
+          return true;
+        }
+      }
+      
       // Verificar si FCM es compatible con este navegador
       const isFCMSupported = await isSupported();
       

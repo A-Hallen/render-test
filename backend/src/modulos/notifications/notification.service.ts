@@ -46,6 +46,7 @@ export class NotificationService {
       throw error;
     }
   }
+  
 
   /**
    * Envía una notificación a un usuario específico y la guarda en la base de datos
@@ -69,35 +70,42 @@ export class NotificationService {
       // Extraer solo los tokens
       const tokens = userTokens.map(t => t.token);
 
-      // Configurar el mensaje
+      // Configurar el mensaje - usando SOLO data para evitar duplicados
+      // FCM envía duplicados cuando se usan tanto notification como data
       const message: admin.messaging.MulticastMessage = {
         tokens,
-        notification: {
+        data: {
           title: notification.title,
           body: notification.body,
-          imageUrl: notification.imageUrl
-        },
-        data: {
           ...notification.data,
-          type: notification.type || 'info'
+          type: notification.type || 'info',
+          // Convertir timestamp a string para evitar errores
+          timestamp: Date.now().toString(),
+          // Incluir un ID único para la notificación
+          notificationId: `${notification.type || 'info'}-${Date.now()}`
         },
+        // Usar solo fcmOptions sin notification para evitar duplicados
         webpush: {
-          notification: {
-            icon: '/logo192.png',
-            badge: '/badge.png',
-            vibrate: [100, 50, 100],
-            actions: [
-              {
-                action: 'open',
-                title: 'Ver'
-              }
-            ]
-          },
           fcmOptions: {
             link: '/'
+          },
+          // Incluir headers para mejorar la entrega
+          headers: {
+            Urgency: 'high'
           }
         }
       };
+      
+      // Añadir imageUrl a data si existe
+      if (notification.imageUrl && notification.imageUrl.trim() !== '' && message.data) {
+        message.data.imageUrl = notification.imageUrl;
+      }
+      
+      // Añadir icon y badge a data para que el service worker los use
+      if (message.data) {
+        message.data.icon = '/logo192.png';
+        message.data.badge = '/badge.png';
+      }
 
       // Guardar la notificación en la base de datos
       const notificationWithUserId = {

@@ -36,28 +36,64 @@ const messaging = initializeFirebase();
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Recibido mensaje en segundo plano:', payload);
   
-  const { notification, data } = payload;
+  // Ahora solo esperamos data, ya que el backend solo envía data para evitar duplicados
+  const { data } = payload;
   
-  if (notification) {
-    // Mostrar notificación nativa del sistema
-    const notificationTitle = notification.title || 'Nueva notificación';
+  // Verificar si tenemos datos válidos para mostrar una notificación
+  if (data && data.title) {
+    // Usar el ID proporcionado o generar uno nuevo
+    const notificationId = data.notificationId || `notification-${Date.now()}`;
+    
+    // Configurar opciones de la notificación
     const notificationOptions = {
-      body: notification.body || '',
-      icon: '/logo192.png', // Asegúrate de que este archivo exista en la carpeta public
-      badge: '/badge-icon.png', // Opcional: icono para dispositivos móviles
-      data: data || {},
-      tag: data?.id || Date.now().toString(), // Usar un tag para agrupar notificaciones
+      body: data.body || '',
+      icon: data.icon || '/logo192.png',
+      badge: data.badge || '/badge-icon.png',
+      data: data,
+      tag: notificationId, // Usar un tag para evitar duplicados
       actions: [
         {
           action: 'view',
           title: 'Ver'
         }
       ],
-      // Esto asegura que la notificación se muestre incluso si la app está en segundo plano
-      requireInteraction: true
+      requireInteraction: true,
+      renotify: false // No notificar nuevamente si ya existe una con el mismo tag
     };
+    
+    // Añadir imagen solo si existe
+    if (data.imageUrl) {
+      notificationOptions.image = data.imageUrl;
+    }
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    // Notificar a todas las ventanas abiertas de la aplicación sobre la nueva notificación
+    // para actualizar la interfaz de usuario
+    self.clients.matchAll({type: 'window'}).then(clientList => {
+      clientList.forEach(client => {
+        client.postMessage({
+          type: 'NEW_NOTIFICATION',
+          payload: data
+        });
+      });
+    });
+
+    // Verificar si ya existe una notificación con el mismo tag antes de mostrarla
+    self.registration.getNotifications({ tag: notificationId }).then(notifications => {
+      if (notifications.length === 0) {
+        // No hay notificaciones duplicadas, mostrar esta
+        self.registration.showNotification(data.title, notificationOptions)
+          .then(() => {
+            console.log('[firebase-messaging-sw.js] Notificación mostrada correctamente:', notificationId);
+          })
+          .catch(error => {
+            console.error('[firebase-messaging-sw.js] Error al mostrar notificación:', error);
+          });
+      } else {
+        console.log('[firebase-messaging-sw.js] Notificación duplicada detectada, no se mostrará:', notificationId);
+      }
+    });
+  } else {
+    console.log('[firebase-messaging-sw.js] Mensaje recibido sin datos de notificación válidos');
   }
 });
 
@@ -70,6 +106,7 @@ self.addEventListener('notificationclick', (event) => {
   
   // Obtener los datos de la notificación
   const notificationData = event.notification.data || {};
+  const notificationId = notificationData.notificationId || event.notification.tag;
   
   // URL base para abrir
   const urlToOpen = new URL('/', self.location.origin).href;
@@ -91,19 +128,24 @@ self.addEventListener('notificationclick', (event) => {
       }
     }
     
+    // Preparar el mensaje para la aplicación principal
+    const messagePayload = {
+      type: 'NOTIFICATION_CLICKED',
+      payload: {
+        notificationId: notificationId,
+        timestamp: Date.now(),
+        data: notificationData,
+        action: event.action || 'default'
+      }
+    };
+    
     // Si encontramos una ventana existente
     if (existingClient) {
       // Primero enfocamos la ventana
       return existingClient.focus().then((focusedClient) => {
         // Luego enviamos un mensaje a la aplicación principal para actualizar las notificaciones
-        return focusedClient.postMessage({
-          type: 'NOTIFICATION_CLICKED',
-          payload: {
-            notificationId: notificationData.id,
-            timestamp: Date.now(),
-            data: notificationData
-          }
-        });
+        console.log('[Service Worker] Enviando mensaje a cliente existente:', messagePayload);
+        return focusedClient.postMessage(messagePayload);
       });
     }
     
@@ -111,16 +153,11 @@ self.addEventListener('notificationclick', (event) => {
     if (clients.openWindow) {
       return clients.openWindow(urlToOpen).then(client => {
         if (client) {
+          console.log('[Service Worker] Ventana abierta, esperando para enviar mensaje');
           // Esperar un momento para que la aplicación se inicialice
           setTimeout(() => {
-            client.postMessage({
-              type: 'NOTIFICATION_CLICKED',
-              payload: {
-                notificationId: notificationData.id,
-                timestamp: Date.now(),
-                data: notificationData
-              }
-            });
+            console.log('[Service Worker] Enviando mensaje a nueva ventana:', messagePayload);
+            client.postMessage(messagePayload);
           }, 1500);
         }
       });
