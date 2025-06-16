@@ -78,7 +78,14 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
             .get()
             .then(querySnapshot => {
               querySnapshot.forEach((doc) => {
-                const data = doc.data() as SaldosContables;
+                const rawData = doc.data();
+                const data = rawData as SaldosContables;
+                
+                // Normalizar solo el campo saldo para manejar correctamente decimales
+                if (typeof rawData.saldo === 'string') {
+                  data.saldo = Number(String(rawData.saldo).replace(/,/g, '.'));
+                }
+                
                 saldos.push(data);
               });
               return querySnapshot.size; // Devolver el número de documentos procesados
@@ -103,7 +110,7 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
       return saldos;
     } catch (error) {
       console.error('Error al obtener saldos por oficina, fechas y cuentas:', error);
-      throw error;
+      throw error; 
     }
   }
 
@@ -142,7 +149,14 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
       // Procesar los resultados de todas las consultas
       resultados.forEach(querySnapshot => {
         querySnapshot.forEach((doc) => {
-          const data = doc.data() as SaldosContables;
+          const rawData = doc.data();
+          const data = rawData as SaldosContables;
+          
+          // Normalizar solo el campo saldo para manejar correctamente decimales
+          if (typeof rawData.saldo === 'string') {
+            data.saldo = Number(String(rawData.saldo).replace(/,/g, '.'));
+          }
+          
           saldos.push(data);
         });
       });

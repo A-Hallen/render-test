@@ -4,7 +4,6 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { NotificationCenter } from '../notifications/NotificationCenter';
 import { useNotification } from '../../context/NotificationContext';
-import N8nChatWidget from '../chat/N8nChatWidget';
 
 export const Layout: React.FC = () => {
   const { showNotifications, toggleNotifications } = useNotification();
@@ -48,7 +47,6 @@ export const Layout: React.FC = () => {
         isOpen={showNotifications} 
         onClose={() => toggleNotifications(false)} 
       />
-      <N8nChatWidget />
     </div>
   );
 };

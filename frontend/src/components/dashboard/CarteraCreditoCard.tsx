@@ -13,7 +13,7 @@ export const CarteraCreditoCard: React.FC<CarteraCreditoCardProps> = ({ codigoOf
     const response = await CarteraCreditoService.obtenerCarteraCredito(oficina);
     // Transformar el resultado al formato esperado por IndicadorFinancieroData
     if (!response || !response.carteraActual) return null;
-    
+
     // Devolvemos directamente el objeto carteraActual que ya tiene la estructura correcta
     return response.carteraActual;
   };

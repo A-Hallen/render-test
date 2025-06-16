@@ -12,6 +12,7 @@ import {
   ConfiguracionReporteDTO,
   CuentaData
 } from 'shared/src/types/reportes.types';
+import { IndicadorContable } from '../../indicadores-contables/interfaces/IndicadorContable.interface';
 
 // Interfaces para las solicitudes y respuestas
 interface ReporteContabilidadRequest {
@@ -61,8 +62,6 @@ export class ReporteContabilidadRepository {
     // Usamos directamente el modelo ConfiguracionReporte para las consultas
   }
 
-
-
   /**
    * Genera un reporte de contabilidad basado en los parámetros proporcionados
    * @param reporteData Datos para generar el reporte
@@ -87,7 +86,9 @@ export class ReporteContabilidadRepository {
       let saldos: any[] = [];
       let fechaReporte: string;
       let descripcionPeriodo: string = '';
-      
+
+      const cuentas = configuracion.categorias.flatMap((categoria) => categoria.cuentas);
+
       if (reporteData.fechaInicio && reporteData.fechaFin) {
         // Reporte por rango de fechas
         const fechaInicio = new Date(Date.parse(reporteData.fechaInicio + 'T00:00:00'));
@@ -128,13 +129,14 @@ export class ReporteContabilidadRepository {
           }
           descripcionPeriodo = `Reporte mensual del ${fechaInicio.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })} al ${fechaFin.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
         }
-        
+
         
         // Obtener saldos para todas las fechas en el rango
         if (fechas.length > 0) {
-          saldos = await this.saldosRepository.obtenerSaldosPorOficinaYFecha(
+          saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(
             reporteData.oficina,
-            fechas
+            fechas,
+            cuentas
           );
         }
         
@@ -143,9 +145,10 @@ export class ReporteContabilidadRepository {
       } else if (reporteData.fecha) {
         // Reporte por fecha específica (mantener compatibilidad)
         const fecha = new Date(Date.parse(reporteData.fecha + 'T00:00:00'));
-        saldos = await this.saldosRepository.obtenerSaldosPorOficinaYFecha(
+        saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(
           reporteData.oficina,
-          [fecha]
+          [fecha],
+          cuentas
         );
         fechaReporte = reporteData.fecha;
         descripcionPeriodo = `Reporte del ${reporteData.fecha}`;

@@ -49,7 +49,6 @@ export const CaptacionesCard: React.FC<CaptacionesCardProps> = ({ tipo, codigoOf
       color={COLOR[tipo]}
       codigoOficina={codigoOficina}
       fetchData={fetchCaptaciones}
-      formatCurrency={(value) => new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(value)}
     />
   );
 };
