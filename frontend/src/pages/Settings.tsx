@@ -1,35 +1,44 @@
 import React, { useState } from 'react';
 import { KpiFormulaEditor } from '../components/settings/KpiFormulaEditor';
 import { UserManagement } from '../components/settings/UserManagement';
-import { N8nChatConfig } from '../components/settings/N8nChatConfig';
+import { CooperativaConfig } from '../components/settings/CooperativaConfig';
 import {
   Globe,
   User,
   Lock,
   Database,
   Bell,
-  Server,
   Save,
   CreditCard,
   Users,
   PiggyBank,
   Calculator,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from 'shared';
 
 export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general');
+  const {user} = useAuth();
 
-  const tabs = [
-    { id: 'general', name: 'General', icon: <Globe size={18} /> },
-    { id: 'indicadores', name: 'Indicadores', icon: <Calculator size={18} /> },
-    { id: 'user', name: 'Usuario', icon: <User size={18} /> },
-    { id: 'security', name: 'Seguridad', icon: <Lock size={18} /> },
-    { id: 'dataSource', name: 'Fuentes de Datos', icon: <Database size={18} /> },
-    { id: 'notifications', name: 'Notificaciones', icon: <Bell size={18} /> },
-    { id: 'integrations', name: 'Integraciones', icon: <Server size={18} /> },
-    { id: 'thresholds', name: 'Umbrales', icon: <AlertTriangle size={18} /> },
-  ];
+  //solo los usuarios con rol de administrador pueden ver el apartado de general
+  if (user?.role !== UserRole.ADMIN) {
+    return <div>Acceso denegado</div>;
+  }
+
+  const tabs = [];
+
+  if (user?.role === UserRole.ADMIN) {
+    tabs.push({ id: 'general', name: 'General', icon: <Globe size={18} /> });
+  }
+
+  tabs.push({ id: 'indicadores', name: 'Indicadores', icon: <Calculator size={18} /> });
+  tabs.push({ id: 'user', name: 'Usuario', icon: <User size={18} /> });
+  tabs.push({ id: 'security', name: 'Seguridad', icon: <Lock size={18} /> });
+  tabs.push({ id: 'dataSource', name: 'Fuentes de Datos', icon: <Database size={18} /> });
+  tabs.push({ id: 'notifications', name: 'Notificaciones', icon: <Bell size={18} /> });
+  tabs.push({ id: 'thresholds', name: 'Umbrales', icon: <AlertTriangle size={18} /> });
 
   return (
     <div>
@@ -57,60 +66,7 @@ export const Settings: React.FC = () => {
 
           <div className="flex-1 p-6 overflow-auto">
             {activeTab === 'general' && (
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Configuración General</h2>
-
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre de la Institución
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      defaultValue="Cooperativa de Ahorro y Crédito"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Zona Horaria
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="America/Guayaquil">America/Guayaquil (GMT-5)</option>
-                      <option value="America/Quito">America/Quito (GMT-5)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Formato de Fecha
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                      <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                      <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Idioma
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="es-EC">Español (Ecuador)</option>
-                      <option value="en-US">English (United States)</option>
-                    </select>
-                  </div>
-
-                  <div className="mt-8">
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition">
-                      <Save className="mr-2" size={18} />
-                      <span>Guardar cambios</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <CooperativaConfig/>
             )}
 
             {activeTab === 'indicadores' && (
@@ -410,114 +366,6 @@ export const Settings: React.FC = () => {
                   <div className="mt-4">
                     <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                       + Añadir nueva fuente de datos
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'integrations' && (
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Integraciones</h2>
-
-                <div className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-                    <p className="text-sm text-blue-800">
-                      Configure integraciones con servicios externos y herramientas de automatización.
-                    </p>
-                  </div>
-
-                  {/* N8n Chat Integration */}
-                  <div className="border border-gray-200 rounded-md overflow-hidden mb-6">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-gray-700">n8n Chat Asistente</h3>
-                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">Nuevo</span>
-                    </div>
-                    <div className="p-4">
-                      <N8nChatConfig />
-                    </div>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-md overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-gray-700">n8n Workflow Automation</h3>
-                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Activo</span>
-                    </div>
-                    <div className="p-4 space-y-4">
-                      <p className="text-sm text-gray-600">
-                        Integre el sistema con n8n para crear flujos de trabajo automatizados para tareas repetitivas, notificaciones personalizadas y más.
-                      </p>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          URL del Servidor n8n
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          defaultValue="https://workflow.example.com"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          API Key
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          defaultValue="••••••••••••••••"
-                        />
-                      </div>
-
-                      <div className="mt-2">
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            defaultChecked
-                          />
-                          <span className="ml-2 text-sm text-gray-700">
-                            Habilitar webhooks de n8n para recibir eventos
-                          </span>
-                        </label>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition">
-                          Probar conexión
-                        </button>
-
-                        <div>
-                          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
-                            Guardar cambios
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-md overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-gray-700">SEPS Ecuador (API Regulatoria)</h3>
-                      <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Inactivo</span>
-                    </div>
-                    <div className="p-4 space-y-4">
-                      <p className="text-sm text-gray-600">
-                        Integre el sistema con la API de la Superintendencia de Economía Popular y Solidaria para el envío automático de informes regulatorios.
-                      </p>
-
-                      <div className="flex items-center justify-end mt-4">
-                        <button className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition">
-                          Configurar integración
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                      + Añadir nueva integración
                     </button>
                   </div>
                 </div>

@@ -14,10 +14,11 @@ import {
   TABLA_CUENTACONTABLE,
   TABLA_DIVISION,
 } from "../../../database/database.constants";
+import { BaseFirebaseRepository } from "../../../base/base.firebaseRepository";
 
-export class ConfiguracionReportesContabilidadRepository extends BaseRepository<ConfiguracionReporteContabilidad> {
+export class ConfiguracionReportesContabilidadRepository extends BaseFirebaseRepository<ConfiguracionReporteContabilidad> {
   constructor() {
-    super(ConfiguracionReporteContabilidad);
+    super("configuracionesReportesContabilidad");
     this.saldosRepository = new SaldosRepository();
     this.sequelize = sequelize;
   }
@@ -26,7 +27,19 @@ export class ConfiguracionReportesContabilidadRepository extends BaseRepository<
   private saldosRepository;
 
   obtenerConfiguracionesActivas = async () => {
-    return this.model.findAll({ where: { esActivo: true } });
+    const query = this.collection.where("esActivo", "==", true);
+    const snapshot = await query.get();
+    return snapshot.docs.map(
+      (doc) => doc.data() as ConfiguracionReporteContabilidad
+    );
+  };
+
+  obtenerConfiguracion = async (nombre: string) => {
+    const query = this.collection.where("nombre", "==", nombre).limit(1);
+    const snapshot = await query.get();
+    return snapshot.docs.map(
+      (doc) => doc.data() as ConfiguracionReporteContabilidad
+    )[0];
   };
 
   obtenerCuentas = async (): Promise<CuentaData[]> => {
@@ -48,9 +61,17 @@ export class ConfiguracionReportesContabilidadRepository extends BaseRepository<
       throw new Error("Periodo inválido");
     }
     const periodoNormalizado = reporteData.periodo?.toLowerCase() || "mensual";
-    const configuracion = await this.model.findOne({
-      where: { nombre: reporteData.tipo.nombre },
-    });
+    const snapshot = await this.collection
+      .where("nombre", "==", reporteData.tipo.nombre)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      throw new Error("Configuración no encontrada");
+    }
+
+    const configuracion =
+      snapshot.docs[0].data() as ConfiguracionReporteContabilidad;
     if (!configuracion) {
       throw new Error("Configuración no encontrada");
     }
@@ -201,7 +222,7 @@ export class ConfiguracionReportesContabilidadRepository extends BaseRepository<
         );
         // Solo agregar la fecha si es mayor o igual a la fecha de inicio
         if (ultimoDiaMes >= fechaInicio) {
-          fechas.push(ultimoDiaMes.toISOString().split('T')[0]);
+          fechas.push(ultimoDiaMes.toISOString().split("T")[0]);
         }
 
         // Avanzar al siguiente mes
@@ -241,7 +262,7 @@ export class ConfiguracionReportesContabilidadRepository extends BaseRepository<
 
       const fechaActual = new Date(fechaInicio);
       while (fechaActual <= fechaFin) {
-        fechas.push(fechaActual.toISOString().split('T')[0]);
+        fechas.push(fechaActual.toISOString().split("T")[0]);
         fechaActual.setDate(fechaActual.getDate() + 1);
       }
 
@@ -253,29 +274,49 @@ export class ConfiguracionReportesContabilidadRepository extends BaseRepository<
   }
 
   actualizarConfiguracion = async (configuracion: ConfiguracionReporteDTO) => {
-    const response = await this.sequelize.query(
-      `UPDATE \`${TABLA_CONFIGURACIONES_REPORTES}\` SET nombre = :nombre, descripcion = :descripcion, categorias = :categorias, esActivo = :esActivo, fechaModificacion = :fechaModificacion WHERE nombre = :nombre`,
-      {
-        replacements: {
-          nombre: configuracion.nombre,
-          descripcion: configuracion.descripcion,
-          categorias: JSON.stringify(configuracion.categorias),
-          esActivo: configuracion.esActivo,
-          fechaModificacion: new Date(),
-        },
-        type: QueryTypes.UPDATE,
-      }
-    );
-    return {
-      success: true,
-      message: "Configuración actualizada correctamente",
-    };
+    const snapshot = await this.collection
+    .where('nombre', '==', configuracion.nombre)
+    .limit(1)
+    .get();
+
+    if (snapshot.empty) {
+      return {
+        success: false,
+        message: "Configuración no encontrada",
+      };
+    }
+
+    const docRef = snapshot.docs[0].ref;
+      await docRef.update({
+        nombre: configuracion.nombre,
+        descripcion: configuracion.descripcion,
+        categorias: configuracion.categorias,
+        esActivo: configuracion.esActivo,
+        fechaModificacion: new Date()
+      });
+
+      return {
+        success: true,
+        message: "Configuración actualizada correctamente",
+      };
   };
 
   eliminarConfiguracion = async (configuracion: ConfiguracionReporteDTO) => {
-    console.log("[ConfiguracionReportesContabilidadRepository] eliminando configuracion... ", configuracion);
-    const whereCondition: WhereOptions = { nombre: configuracion.nombre };
-    const result = await this.model.destroy({ where: whereCondition });
-    return result > 0;
+    console.log(
+      "[ConfiguracionReportesContabilidadRepository] eliminando configuracion... ",
+      configuracion
+    );
+
+    const snapshot = await this.collection
+        .where('nombre', '==', configuracion.nombre)
+        .limit(1)
+        .get();
+
+        if (snapshot.empty) {
+          return false;
+        }
+
+        await snapshot.docs[0].ref.delete();
+        return true;
   };
 }

@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { OficinasDTO } from 'shared/src/types/oficinas.types';
+import { CooperativaDTO } from 'shared/src/types/cooperativa.types';
 import { fetchData as fetchDataService, obtenerOficinas as obtenerOficinasService } from '../services/data.service';
+import { obtenerCooperativa, actualizarCooperativa } from '../services/cooperativa.service';
+import { useAuth } from './AuthContext';
+import { UserRole } from '../types/auth';
 
 interface DataContextType {
   loading: boolean;
@@ -10,16 +14,32 @@ interface DataContextType {
   setOficinaSeleccionada: (oficina: OficinasDTO) => void;
   fetchData: (endpoint: string, params?: Record<string, string>) => Promise<any>;
   fetchOficinasIfNeeded: () => Promise<OficinasDTO[]>;
+  // Cooperativa
+  cooperativa: CooperativaDTO | null;
+  cooperativaLoading: boolean;
+  cooperativaError: string | null;
+  canEditCooperativa: boolean;
+  actualizarDatosCooperativa: (datos: Partial<CooperativaDTO>) => Promise<void>;
+  cargarDatosCooperativa: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oficinas, setOficinas] = useState<OficinasDTO[]>([]);
   const [oficinaSeleccionada, setOficinaSeleccionada] = useState<OficinasDTO | null>(null);
   const [dataCache, setDataCache] = useState<Record<string, { data: any; timestamp: number }>>({});
+  
+  // Estados para la cooperativa
+  const [cooperativa, setCooperativa] = useState<CooperativaDTO | null>(null);
+  const [cooperativaLoading, setCooperativaLoading] = useState(false);
+  const [cooperativaError, setCooperativaError] = useState<string | null>(null);
+  
+  // Verificar si el usuario tiene permisos para editar la cooperativa
+  const canEditCooperativa = user?.role === UserRole.ADMIN;
 
   // Nota: La configuración de tiempo de caducidad del caché se ha eliminado ya que actualmente no se utiliza
 
@@ -89,10 +109,48 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [oficinas, oficinaSeleccionada]);
 
-  // Cargar oficinas al iniciar
+  // Función para cargar los datos de la cooperativa
+  const cargarDatosCooperativa = useCallback(async () => {
+    try {
+      setCooperativaLoading(true);
+      setCooperativaError(null);
+      
+      const data = await obtenerCooperativa();
+      console.log("datos de la cooperativa", data);
+      setCooperativa(data);
+    } catch (err: any) {
+      setCooperativaError(err.message || 'Error al cargar datos de la cooperativa');
+      console.error('Error al cargar datos de la cooperativa:', err);
+    } finally {
+      setCooperativaLoading(false);
+    }
+  }, []);
+
+  // Función para actualizar los datos de la cooperativa
+  const actualizarDatosCooperativa = useCallback(async (datos: Partial<CooperativaDTO>) => {
+    if (!canEditCooperativa) {
+      throw new Error('No tienes permisos para editar la información de la cooperativa');
+    }
+    
+    try {
+      setCooperativaLoading(true);
+      setCooperativaError(null);
+      
+      const cooperativaActualizada = await actualizarCooperativa(datos);
+      setCooperativa(cooperativaActualizada);
+    } catch (err: any) {
+      setCooperativaError(err.message || 'Error al actualizar datos de la cooperativa');
+      throw err;
+    } finally {
+      setCooperativaLoading(false);
+    }
+  }, [canEditCooperativa]);
+
+  // Cargar oficinas y datos de la cooperativa al iniciar
   useEffect(() => {
     fetchOficinasIfNeeded();
-  }, [fetchOficinasIfNeeded]);
+    cargarDatosCooperativa();
+  }, [fetchOficinasIfNeeded, cargarDatosCooperativa]);
 
   return (
     <DataContext.Provider value={{
@@ -102,7 +160,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       oficinaSeleccionada,
       setOficinaSeleccionada,
       fetchData,
-      fetchOficinasIfNeeded
+      fetchOficinasIfNeeded,
+      // Cooperativa
+      cooperativa,
+      cooperativaLoading,
+      cooperativaError,
+      canEditCooperativa,
+      actualizarDatosCooperativa,
+      cargarDatosCooperativa
     }}>
       {children}
     </DataContext.Provider>

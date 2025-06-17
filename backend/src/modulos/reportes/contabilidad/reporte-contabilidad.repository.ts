@@ -9,11 +9,9 @@ import {
   TABLA_SALDOCONTABLE
 } from '../../../database/database.constants';
 import {
-  ConfiguracionReporteDTO,
   CuentaData
 } from 'shared/src/types/reportes.types';
-import { IndicadorContable } from '../../indicadores-contables/interfaces/IndicadorContable.interface';
-
+import { ConfiguracionReportesContabilidadRepository } from '../../configuracion-reportes/contabilidad/configuracion-reportes-contabilidad.repository';
 // Interfaces para las solicitudes y respuestas
 interface ReporteContabilidadRequest {
   fechaInicio?: string;
@@ -54,11 +52,13 @@ export class ReporteContabilidadRepository {
   model;
   private sequelize;
   private saldosRepository;
+  private configuracionReportesContabilidadRepository;
 
   constructor() {
     this.model = ReporteContabilidad;
     this.saldosRepository = new SaldosRepository();
     this.sequelize = sequelize;
+    this.configuracionReportesContabilidadRepository = new ConfiguracionReportesContabilidadRepository();
     // Usamos directamente el modelo ConfiguracionReporte para las consultas
   }
 
@@ -70,9 +70,7 @@ export class ReporteContabilidadRepository {
   generarReporteContabilidad = async (reporteData: ReporteContabilidadRequest) => {
     try {
       // Validar la configuración del reporte
-      const configuracion = await ConfiguracionReporte.findOne({
-        where: { nombre: reporteData.nombreConfiguracion, esActivo: true }
-      });
+      const configuracion = await this.configuracionReportesContabilidadRepository.obtenerConfiguracion(reporteData.nombreConfiguracion)
 
 
       if (!configuracion) {

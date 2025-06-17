@@ -11,6 +11,7 @@ import kpiContablesRoutes from './modulos/kpi-contables/kpi-contables.routes';
 import sincronizacionRoutes from './modulos/sincronizacion/sincronizacion.routes';
 import carteraCreditoRoutes from './modulos/cartera-credito/cartera-credito.routes';
 import captacionesRoutes from './modulos/captaciones/captaciones.routes';
+import cooperativaRoutes from './modulos/cooperativa/cooperativa.routes';
 // El módulo de indicadores original ha sido eliminado como parte de la refactorización
 import { ValidationError } from 'sequelize';
 import { sincronizacionService } from './database/SincronizacionService';
@@ -39,6 +40,7 @@ app.use('/api/chat', iaRoutes);
 app.use('/api/sincronizacion', sincronizacionRoutes);
 app.use('/api/cartera-credito', carteraCreditoRoutes);
 app.use('/api/captaciones', captacionesRoutes);
+app.use('/api/cooperativa', cooperativaRoutes);
 
 // Redirección temporal para mantener compatibilidad con código existente
 // Esta ruta debe eliminarse una vez que todas las referencias hayan sido actualizadas

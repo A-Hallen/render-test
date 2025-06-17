@@ -7,3 +7,4 @@ export * from './oficinas.types';
 export * from './reportes.types';
 export * from './cartera-credito.types';
 export * from './captaciones.types';
+export * from './cooperativa.types';

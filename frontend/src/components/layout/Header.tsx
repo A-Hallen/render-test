@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Bell, HelpCircle, UserCircle, User, Shield, BellOff } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { UserRole } from '../../types/auth';
 import { EmailVerificationAlert } from '../auth/EmailVerificationAlert';
 import { SearchInput } from '../search/SearchInput';
@@ -12,10 +13,9 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
-  // Usar profileVersion para forzar re-renderizado cuando cambia la imagen
   const { user, logout, sendEmailVerification, isEmailVerified } = useAuth();
-  // Acceder a profileVersion para asegurar que el componente se re-renderice
   useAuth().profileVersion;
+  const { cooperativa } = useData();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
@@ -23,7 +23,6 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout>();
   
-  // Función para solicitar la verificación de email
   const requestEmailVerification = async () => {
     if (!user || !user.email || isEmailVerified) return;
     
@@ -88,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({ toggleNotifications }) => {
       {user && !isEmailVerified && <EmailVerificationAlert className="mb-0" />}
       <header className="bg-white border-b border-gray-200 py-3 px-4 md:px-6 flex items-center justify-between">
       <div className="flex items-center space-x-2 text-lg font-semibold text-blue-900">
-        Cooperativa de Ahorro y Crédito
+        {cooperativa?.nombre || "Cooperativa"}
       </div>
       
       <div className="hidden md:flex items-center flex-1 max-w-lg mx-auto">
