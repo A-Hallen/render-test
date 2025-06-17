@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
+import * as admin from 'firebase-admin';
 import { storage as firebaseStorage } from '../../config/firebase.config';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { AuthService } from './auth.service';
+import { CooperativaService } from './cooperativa.service';
 import { URL } from 'url';
+import { UserRole } from '../auth/interfaces/user.interface';
 
 // Configuración de multer para almacenamiento temporal
 const storage = multer.diskStorage({
@@ -38,16 +40,16 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
+    fileSize: 2 * 1024 * 1024 // 2MB
   }
 });
 
-export class UploadController {
-  private authService: AuthService;
+export class UploadCooperativaController {
+  private cooperativaService: CooperativaService;
   private bucket: any; // Firebase Storage Bucket
 
   constructor() {
-    this.authService = new AuthService();
+    this.cooperativaService = CooperativaService.getInstance();
     // Obtener el bucket predeterminado de Firebase Storage
     this.bucket = firebaseStorage.bucket();
   }
@@ -55,18 +57,17 @@ export class UploadController {
   /**
    * Middleware para manejar la subida de archivos con multer
    */
-  uploadMiddleware = upload.single('image');
+  uploadMiddleware = upload.single('logo');
 
   /**
-   * Sube una imagen de perfil a Firebase Storage y actualiza el perfil del usuario
+   * Sube una imagen de logo para la cooperativa a Firebase Storage y actualiza la información de la cooperativa
    * Elimina la imagen anterior si existe
    */
-  async uploadProfileImage(req: Request, res: Response): Promise<void> {
+  async uploadLogo(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.uid;
-      
-      if (!userId) {
-        res.status(401).json({ message: 'No autenticado' });
+      // Verificar que el usuario sea administrador
+      if (!req.user || req.user.role !== UserRole.ADMIN) {
+        res.status(403).json({ message: 'No tienes permisos para actualizar el logo de la cooperativa' });
         return;
       }
 
@@ -76,26 +77,24 @@ export class UploadController {
         return;
       }
 
-      // Obtener el usuario actual para verificar si ya tiene una imagen de perfil
-      const currentUser = await this.authService.getUserById(userId);
-      const currentPhotoURL = currentUser?.photoURL;
+      // Obtener la cooperativa actual para verificar si ya tiene un logo
+      const currentCooperativa = await this.cooperativaService.obtenerCooperativa();
+      const currentLogoURL = currentCooperativa?.logo;
       
-      // Si el usuario ya tiene una imagen de perfil, extraer la ruta para eliminarla
+      // Si la cooperativa ya tiene un logo, extraer la ruta para eliminarla
       let oldImagePath = null;
-      if (currentPhotoURL && currentPhotoURL.includes('profile-images')) {
+      if (currentLogoURL && currentLogoURL.includes('cooperativa-imagen')) {
         try {
           // Extraer la ruta del archivo de la URL
-          // Las URLs de Firebase Storage suelen tener este formato:
-          // https://storage.googleapis.com/[BUCKET]/profile-images/[USER_ID]/[FILENAME]
-          const urlParts = new URL(currentPhotoURL);
-          const pathMatch = urlParts.pathname.match(/\/([^\/]+\/profile-images\/.+)/);
+          const urlParts = new URL(currentLogoURL);
+          const pathMatch = urlParts.pathname.match(/\/([^\/]+\/cooperativa-imagen\/.+)/);
           
           if (pathMatch && pathMatch[1]) {
             oldImagePath = pathMatch[1].replace(/^[^\/]+\//, ''); // Eliminar el nombre del bucket
-            console.log(`Imagen anterior detectada: ${oldImagePath}`);
+            console.log(`Logo anterior detectado: ${oldImagePath}`);
           }
         } catch (error) {
-          console.warn('No se pudo extraer la ruta de la imagen anterior:', error);
+          console.warn('No se pudo extraer la ruta del logo anterior:', error);
         }
       }
 
@@ -103,7 +102,7 @@ export class UploadController {
       const filePath = file.path;
 
       // Crear la ruta dentro del bucket existente
-      const destination = `profile-images/${userId}/${Date.now()}_${path.basename(file.originalname)}`;
+      const destination = `cooperativa-imagen/${Date.now()}_${path.basename(file.originalname)}`;
       
       console.log(`Subiendo archivo a: ${destination}`);
       
@@ -127,8 +126,16 @@ export class UploadController {
         expires: '03-01-2500' // URL prácticamente permanente
       }).then((urls: string[]) => urls[0]);
 
-      // Actualizar perfil del usuario con la nueva URL de imagen
-      const updatedUser = await this.authService.updateUser(userId, { photoURL: imageUrl });
+      // Actualizar la cooperativa con la nueva URL del logo
+      if (!currentCooperativa) {
+        res.status(404).json({ message: 'No se encontró información de la cooperativa' });
+        return;
+      }
+
+      const updatedCooperativa = await this.cooperativaService.actualizarCooperativa({
+        id: currentCooperativa.id,
+        logo: imageUrl
+      });
 
       // Eliminar archivo temporal local
       fs.unlinkSync(filePath);
@@ -136,22 +143,22 @@ export class UploadController {
       // Eliminar la imagen anterior de Firebase Storage si existe
       if (oldImagePath) {
         try {
-          console.log(`Intentando eliminar imagen anterior: ${oldImagePath}`);
+          console.log(`Intentando eliminar logo anterior: ${oldImagePath}`);
           await this.bucket.file(oldImagePath).delete();
-          console.log('Imagen anterior eliminada correctamente');
+          console.log('Logo anterior eliminado correctamente');
         } catch (deleteError) {
           // No interrumpimos el flujo principal si hay un error al eliminar la imagen anterior
-          console.warn('Error al eliminar la imagen anterior:', deleteError);
+          console.warn('Error al eliminar el logo anterior:', deleteError);
         }
       }
 
       res.status(200).json({
         success: true,
         imageUrl,
-        user: updatedUser
+        cooperativa: updatedCooperativa
       });
     } catch (error: any) {
-      console.error('Error al subir imagen de perfil:', error);
+      console.error('Error al subir logo de la cooperativa:', error);
       
       // Eliminar archivo temporal si existe
       if (req.file && fs.existsSync(req.file.path)) {
@@ -160,14 +167,14 @@ export class UploadController {
       
       // Determinar código de estado y mensaje apropiados
       let statusCode = 500;
-      let message = 'Error al subir imagen de perfil';
+      let message = 'Error al subir logo de la cooperativa';
       
       if (error.message === 'Solo se permiten archivos de imagen') {
         statusCode = 400;
         message = error.message;
       } else if (error.code === 'LIMIT_FILE_SIZE') {
         statusCode = 400;
-        message = 'El tamaño máximo de la imagen es 5MB';
+        message = 'El tamaño máximo de la imagen es 2MB';
       }
       
       res.status(statusCode).json({

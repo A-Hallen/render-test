@@ -146,11 +146,6 @@ export const ApexIndicadoresChart = () => {
             return fechaA - fechaB;
         });
         
-        console.log("Datos transformados para gráfico:", {
-            indicadores,
-            indicadoresCalculados
-        });
-        
         return {
             indicadores,
             indicadoresCalculados

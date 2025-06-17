@@ -16,7 +16,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserRole } from 'shared';
+import { UserRole } from 'shared/src/types/auth.types';
 
 export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general');

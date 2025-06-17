@@ -181,7 +181,7 @@ export const authService = {
    */
   async sendEmailVerification(email: string) {
     try {
-      return await httpClient.post('/api/auth/email-verification', { email });
+      return await httpClient.post('/api/auth/send-verification-email', { email });
     } catch (error) {
       console.error('Error al enviar correo de verificación:', error);
       throw error;

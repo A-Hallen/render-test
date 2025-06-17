@@ -3,11 +3,6 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { UserRole } from './interfaces/user.interface';
 
-// Interfaz para la solicitud de refresh token
-interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
 export class AuthController {
   private authService: AuthService;
 

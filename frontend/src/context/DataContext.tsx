@@ -146,11 +146,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [canEditCooperativa]);
 
-  // Cargar oficinas y datos de la cooperativa al iniciar
+  // Cargar oficinas al iniciar
   useEffect(() => {
     fetchOficinasIfNeeded();
-    cargarDatosCooperativa();
-  }, [fetchOficinasIfNeeded, cargarDatosCooperativa]);
+  }, [fetchOficinasIfNeeded]);
+  
+  // Cargar datos de la cooperativa cuando el usuario está autenticado
+  useEffect(() => {
+    if (user) {
+      cargarDatosCooperativa();
+    }
+  }, [user, cargarDatosCooperativa]);
 
   return (
     <DataContext.Provider value={{

@@ -15,10 +15,12 @@ import {
   CreditCard,
   Banknote,
   Box,
-  Bell
+  Bell,
+  Image
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
+import { useData } from '../../context/DataContext';
 
 export interface SidebarProps {
   collapsed: boolean;
@@ -33,6 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
   const { user } = useAuth();
   // Acceder a profileVersion para asegurar que el componente se re-renderice
   useAuth().profileVersion;
+  // Obtener datos de la cooperativa para mostrar el logo
+  const { cooperativa } = useData();
 
   const navItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
@@ -59,7 +63,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
       } h-screen flex flex-col`}
     >
       <div className="flex items-center p-4 border-b border-blue-800">
-        {!collapsed && <h1 className="text-xl font-semibold">FinCoop AI</h1>}
+        {!collapsed ? (
+          cooperativa?.logo ? (
+            <div className="flex-1 flex items-center">
+              <img 
+                src={cooperativa.logo} 
+                alt={cooperativa.nombre || 'Logo de la cooperativa'} 
+                className="h-8 max-w-[180px] object-contain"
+              />
+            </div>
+          ) : (
+            <h1 className="text-xl font-semibold">FinCoop AI</h1>
+          )
+        ) : (
+          cooperativa?.logo ? (
+            <div className="w-full flex justify-center">
+              <img 
+                src={cooperativa.logo} 
+                alt="Logo" 
+                className="h-8 w-8 object-contain"
+              />
+            </div>
+          ) : (
+            <div className="w-full flex justify-center">
+              <Image size={20} />
+            </div>
+          )
+        )}
         <button 
           className="ml-auto text-blue-200 hover:text-white"
           onClick={toggleSidebar}
@@ -95,44 +125,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
         </nav>
       </div>
       
-      {!collapsed && (
-        <div className="p-4 border-t border-blue-800">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              {user?.photoURL ? (
-                <img 
-                  src={user.photoURL} 
-                  alt={user.displayName || 'Usuario'} 
-                  className="h-8 w-8 rounded-full border border-blue-600 object-cover" 
-                />
-              ) : (
-                <div className="h-8 w-8 rounded-full bg-blue-700 flex items-center justify-center">
-                  {user?.displayName?.charAt(0) || 'U'}
-                </div>
-              )}
+      <div className="p-3 border-t border-blue-800 mt-auto">
+        <div className={`flex ${collapsed ? 'justify-center' : 'justify-center'} items-center`}>
+          {collapsed ? (
+            <div className="text-blue-300 text-xs font-light italic">A</div>
+          ) : (
+            <div className="text-blue-300 text-xs font-light flex items-center">
+              <span className="mr-1">powered by</span>
+              <span className="font-semibold text-white">Angia</span>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium truncate max-w-[160px]">{user?.displayName || 'Usuario'}</p>
-              <div className="flex items-center">
-                <span className="text-xs text-blue-300">
-                  {user?.role === UserRole.ADMIN ? 'Administrador' : 
-                   user?.role === UserRole.EDITOR ? 'Editor' : 'Usuario'}
-                </span>
-                {user?.emailVerified ? (
-                  <span className="ml-1.5 text-xs bg-blue-800 text-blue-200 px-1 rounded-sm">
-                    Verificado
-                  </span>
-                ) : (
-                  <span className="ml-1.5 text-xs bg-red-900 text-red-200 px-1 rounded-sm flex items-center">
-                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full mr-0.5 animate-pulse"></span>
-                    No verificado
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </aside>
   );
 };  

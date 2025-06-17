@@ -22,7 +22,6 @@ export const obtenerInfoPublicaCooperativa = async (): Promise<CooperativaDTO> =
 export const obtenerCooperativa = async (): Promise<CooperativaDTO> => {
   try {
     const response = await httpClient.get('/api/cooperativa');
-    console.log("datos de la respuesta a la llamada a obtener cooperativa", response);
     return response;
   } catch (error) {
     console.error('Error al obtener información de la cooperativa:', error);
@@ -41,6 +40,26 @@ export const actualizarCooperativa = async (data: Partial<CooperativaDTO>): Prom
     return response;
   } catch (error) {
     console.error('Error al actualizar información de la cooperativa:', error);
+    throw error;
+  }
+};
+
+/**
+ * Sube una imagen de logo para la cooperativa
+ * @param imageFile Archivo de imagen a subir
+ * @returns URL de la imagen subida y datos actualizados de la cooperativa
+ */
+export const subirLogoCooperativa = async (imageFile: File): Promise<{imageUrl: string, cooperativa: CooperativaDTO}> => {
+  try {
+    // Crear un objeto FormData para enviar el archivo
+    const formData = new FormData();
+    formData.append('logo', imageFile);
+    
+    // Usar el método upload del httpClient para manejar la subida de archivos
+    const response = await httpClient.upload('/api/cooperativa/logo', formData);
+    return response;
+  } catch (error) {
+    console.error('Error al subir logo de la cooperativa:', error);
     throw error;
   }
 };
