@@ -1,0 +1,24 @@
+{
+  "name": "ais-asistente",
+  "version": "1.0.0",
+  "description": "Sistema de gestión financiera para cooperativas con funcionalidades de análisis contable, reportes personalizados e inteligencia artificial.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "cd backend && npm run start",
+    "build": "cd backend && npm run build", 
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/achiong-angia/ais-asistente.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/achiong-angia/ais-asistente/issues"
+  },
+  "homepage": "https://github.com/achiong-angia/ais-asistente#readme"
+}
