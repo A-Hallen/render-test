@@ -73,9 +73,6 @@ export const devolverKPIsPorOficinaRangoFechas = async (
   mensaje?: string;
 }> => {
   try {
-    console.log(`[devolverKPIsPorOficinaRangoFechas] Iniciando cálculo para oficina: ${oficina}, inicio: ${inicio}, fin: ${fin}`);
-    console.log(`[devolverKPIsPorOficinaRangoFechas] Número de indicadores configurados: ${indicadores.length}`);
-    
     // Obtener saldos contables desde el repositorio
     const saldosRepository = new SaldosRepository();
     let saldos: SaldosContables[] = [];
@@ -93,12 +90,10 @@ export const devolverKPIsPorOficinaRangoFechas = async (
         fechaInicioObj = new Date(anioInicio, mesInicio - 1, diaInicio);
         fechaFinObj = new Date(anioFin, mesFin - 1, diaFin);
         
-        console.log(`[devolverKPIsPorOficinaRangoFechas] Fechas parseadas: inicio=${fechaInicioObj.toISOString()}, fin=${fechaFinObj.toISOString()}`);
       } else {
         // Si no hay fechas, usar fecha actual
         fechaInicioObj = new Date();
         fechaFinObj = new Date();
-        console.log(`[devolverKPIsPorOficinaRangoFechas] Usando fecha actual: ${fechaInicioObj.toISOString()}`);
       }
       
       // Generar arrays solo con las fechas de fin de mes entre inicio y fin
@@ -117,6 +112,9 @@ export const devolverKPIsPorOficinaRangoFechas = async (
       // Función para determinar si una fecha es el último día del mes
       const esUltimoDiaDelMes = (fecha: Date): boolean => {
         const ultimoDia = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+        if(inicio === fin){
+          return true;
+        }
         return fecha.getDate() === ultimoDia;
       };
       
@@ -129,12 +127,12 @@ export const devolverKPIsPorOficinaRangoFechas = async (
       // Iterar por los últimos días de cada mes en el rango
       while (fechaActual <= fechaFinObj) {
         // Siempre establecer la fecha al último día del mes actual
-        const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
+        //const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
         
         // Agregar la fecha si está dentro del rango
-        if (ultimoDiaMes <= fechaFinObj) {
-          fechasStr.push(formatearFecha(ultimoDiaMes));
-          fechasDate.push(new Date(ultimoDiaMes));
+        if (fechaActual <= fechaFinObj) {
+          fechasStr.push(formatearFecha(fechaActual));
+          fechasDate.push(new Date(fechaActual));
         }
         
         // Avanzar al siguiente mes
@@ -142,21 +140,13 @@ export const devolverKPIsPorOficinaRangoFechas = async (
         fechaActual.setDate(1); // Establecer al primer día del mes para evitar problemas con meses de diferentes longitudes
       }
       
-      console.log(`[devolverKPIsPorOficinaRangoFechas] Consultando ${fechasDate.length} fechas de fin de mes para la oficina ${oficina}`);
-      console.log("fechas", fechasStr);
-      
-      // OPTIMIZACIÓN: Extraer todos los códigos de cuentas contables necesarios de los indicadores
       const codigosCuentasNecesarias = extraerCodigosCuentasDeIndicadores(indicadores);
-      console.log(`[devolverKPIsPorOficinaRangoFechas] Filtrando por ${codigosCuentasNecesarias.length} códigos de cuentas contables`);
-      
-      // Obtener saldos desde el repositorio, filtrando por cuentas contables necesarias
+
       if (codigosCuentasNecesarias.length > 0) {
         saldos = await saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(oficina, fechasDate, codigosCuentasNecesarias);
       } else {
-        // Si no hay cuentas específicas, usar el método original
         saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechasDate);
       }
-      console.log(`[devolverKPIsPorOficinaRangoFechas] Saldos extraídos: ${saldos.length}`);
     } catch (error) {
       console.error(`[devolverKPIsPorOficinaRangoFechas] Error al obtener saldos: ${error}`);
       // En caso de error, dejar el array de saldos vacío

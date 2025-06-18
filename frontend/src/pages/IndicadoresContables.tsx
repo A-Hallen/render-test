@@ -63,17 +63,20 @@ export const IndicadoresContables: React.FC = () => {
     return `${day}/${month}/${year}`;
   }
 
-  // Cargar oficinas al iniciar
+  // Cargar oficinas al iniciar y configurar la oficina seleccionada
   useEffect(() => {
-    cargarOficinas();
+    const cargarDatosIniciales = async () => {
+      await cargarOficinas();
+      // Cargar indicadores iniciales después de cargar las oficinas y actualizar la oficina seleccionada
+      cargarIndicadores();
+    };
+    
+    cargarDatosIniciales();
   }, []);
-
-  // Solo cargar indicadores cuando el usuario haga clic en consultar, no automáticamente al cambiar filtros
+  
+  // Efecto para registrar cambios en los filtros (para depuración)
   useEffect(() => {
-    // Solo cargar al inicio con los valores por defecto
-    cargarIndicadores();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filtros]);
 
   // Función para cargar las oficinas desde el backend
   const cargarOficinas = async () => {
@@ -81,6 +84,16 @@ export const IndicadoresContables: React.FC = () => {
       setCargandoOficinas(true);
       const oficinasData = await OficinasService.obtenerOficinas();
       setOficinas(oficinasData);
+      
+      // Si hay oficinas disponibles, actualizamos el filtro con la primera oficina disponible
+      // en lugar de usar MATRIZ por defecto
+      if (oficinasData && oficinasData.length > 0) {
+        // Siempre usar la primera oficina disponible al cargar inicialmente
+        // para evitar usar MATRIZ como valor por defecto
+        const oficinaInicial = oficinasData[0].codigo;
+        setFiltros(prev => ({ ...prev, oficina: oficinaInicial }));
+        console.log(`Oficina seleccionada inicialmente: ${oficinaInicial} (${oficinasData[0].nombre})`);
+      }
     } catch (err: any) {
       console.error('Error al cargar oficinas:', err);
       setError(err.message || 'Error al cargar oficinas');
@@ -99,6 +112,17 @@ export const IndicadoresContables: React.FC = () => {
       const oficinaSeleccionada = filtros.oficina;
       const fechaSeleccionada = filtros.fecha;
       
+      console.log(`Cargando indicadores para oficina: ${oficinaSeleccionada}, fecha: ${fechaSeleccionada}`);
+      
+      // Asegurarse de que se está enviando la oficina seleccionada
+      if (!oficinaSeleccionada) {
+        console.error('Error: No se ha seleccionado una oficina');
+        setError('No se ha seleccionado una oficina');
+        setCargando(false);
+        return;
+      }
+      
+      // Llamar al servicio con la oficina seleccionada explícitamente
       const data = await obtenerIndicadoresPorRango(oficinaSeleccionada, fechaSeleccionada, fechaSeleccionada);
       
       // Verificar si hay indicadores calculados para la fecha
@@ -189,7 +213,12 @@ export const IndicadoresContables: React.FC = () => {
 
   // Manejar cambio de oficina
   const handleOficinaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFiltros(prev => ({ ...prev, oficina: e.target.value }));
+    const nuevaOficina = e.target.value;
+    const nombreOficina = oficinas.find(o => o.codigo === nuevaOficina)?.nombre || nuevaOficina;
+    console.log(`Cambiando oficina seleccionada a: ${nuevaOficina} (${nombreOficina})`);
+    setFiltros(prev => ({ ...prev, oficina: nuevaOficina }));
+    // No cargamos automáticamente para mantener consistencia con el comportamiento de la fecha
+    // El usuario debe hacer clic en el botón Consultar para actualizar los datos
   };
 
   // Manejar cambio de fecha desde el input personalizado
@@ -215,6 +244,7 @@ export const IndicadoresContables: React.FC = () => {
 
   // Manejar clic en consultar
   const handleConsultar = () => {
+    console.log(`Consultando indicadores con oficina: ${filtros.oficina}`);
     cargarIndicadores();
   };
 
@@ -362,7 +392,7 @@ export const IndicadoresContables: React.FC = () => {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                 </svg>
-                Indicadores para {filtros.oficina} ({fechaMostrada})
+                Indicadores para {oficinas.find(o => o.codigo === filtros.oficina)?.nombre || filtros.oficina} ({fechaMostrada})
               </h2>
               <Button 
                 onClick={handleConsultar} 
