@@ -6,6 +6,7 @@ import { IndicadorFinancieroCard } from './IndicadorFinancieroCard';
 interface CaptacionesCardProps {
   tipo: 'vista' | 'plazo';
   codigoOficina?: string;
+  color?: string; // Color personalizado para la barra indicadora
 }
 
 const TIPO_LABEL: Record<'vista' | 'plazo', string> = {
@@ -23,7 +24,12 @@ const COLOR: Record<'vista' | 'plazo', 'blue' | 'green' | 'red' | 'yellow' | 'pu
   plazo: 'purple',
 };
 
-export const CaptacionesCard: React.FC<CaptacionesCardProps> = ({ tipo, codigoOficina = 'CNS' }) => {
+const INDICATOR_COLOR: Record<'vista' | 'plazo', string> = {
+  vista: 'bg-gradient-to-r from-green-400 via-green-500 to-emerald-600',
+  plazo: 'bg-gradient-to-r from-purple-400 via-purple-500 to-indigo-600',
+};
+
+export const CaptacionesCard: React.FC<CaptacionesCardProps> = ({ tipo, codigoOficina = 'CNS', color }) => {
   // Función para obtener los datos de captaciones según el tipo
   const fetchCaptaciones = async (oficina?: string) => {
     try {
@@ -47,6 +53,7 @@ export const CaptacionesCard: React.FC<CaptacionesCardProps> = ({ tipo, codigoOf
       title={TIPO_LABEL[tipo]}
       icon={ICONO_COMPONENTE[tipo]}
       color={COLOR[tipo]}
+      indicatorColor={color || INDICATOR_COLOR[tipo]}
       codigoOficina={codigoOficina}
       fetchData={fetchCaptaciones}
     />

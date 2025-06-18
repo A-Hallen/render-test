@@ -17,6 +17,7 @@ export interface IndicadorFinancieroCardProps {
   title: string;
   icon: React.ReactNode;
   color: 'blue' | 'green' | 'red' | 'yellow' | 'purple';
+  indicatorColor?: string; // Color personalizado para la barra indicadora superior
   codigoOficina?: string;
   fetchData: (codigoOficina?: string) => Promise<IndicadorFinancieroData | null>;
   formatCurrency?: (value: number) => string;
@@ -26,6 +27,7 @@ export const IndicadorFinancieroCard: React.FC<IndicadorFinancieroCardProps> = (
   title,
   icon,
   color,
+  indicatorColor,
   codigoOficina,
   fetchData,
   formatCurrency = (value) => {
@@ -152,7 +154,15 @@ export const IndicadorFinancieroCard: React.FC<IndicadorFinancieroCardProps> = (
   
   return (
     <div className="bg-white flex-1 min-w-fit max-w-[600px] rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md relative">
-      
+      {/* Indicador de estado (barra de color en la parte superior) */}
+      <div className={clsx(
+        'h-1.5 w-full',
+        indicatorColor 
+          ? indicatorColor
+          : (esVariacionPositiva 
+              ? 'bg-gradient-to-r from-emerald-400 via-green-400 to-teal-500'
+              : 'bg-gradient-to-r from-rose-400 via-red-400 to-rose-500')
+      )}></div>
       {/* Encabezado del card */}
       <div className="p-5 pb-4">
         <div className="flex justify-between items-start">

@@ -40,21 +40,26 @@ export abstract class SaldosBaseRepository {
       let mesesConDatos = 0;
       let mesInicial = 0;
       const TAMANO_LOTE = 2; // Consultar de 2 en 2 meses
-      const MAX_INTENTOS = 6;  // Máximo 6 intentos (12 meses en total)
+
+      const fechaUltima = "2025-06-16"; //TODO: Cambiar por la fecha actual
       
       let saldos: SaldosContables[] = [];
       
       // Buscar datos incrementalmente hasta tener al menos 2 meses con datos
-      for (let intento = 0; intento < MAX_INTENTOS && mesesConDatos < 2; intento++) {
         // Generar fechas para este lote
         const fechasLote: Date[] = [];
         for (let i = 0; i < TAMANO_LOTE; i++) {
           const mes = mesInicial + i;
-          const fecha = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - mes, 0);
+          var fecha = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - mes, 0);
+          if(mes === 1){
+            // Parsear la fecha manualmente para evitar problemas con zona horaria
+            const [year, month, day] = fechaUltima.split('-').map(Number);
+            fecha = new Date(year, month - 1, day); // Los meses en JS son 0-indexed
+          }
           fechasLote.push(fecha);
         }
         
-        console.log(`[${nombreRepositorio}] Intento ${intento + 1}: Consultando fechas: ${fechasLote.map(f => f.toISOString().split('T')[0]).join(', ')}`);
+        console.log(`[${nombreRepositorio}]: Consultando fechas: ${fechasLote.map(f => f.toISOString().split('T')[0]).join(', ')}`);
         
         // Obtener los saldos para este lote de fechas
         const saldosLote = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(
@@ -79,7 +84,6 @@ export abstract class SaldosBaseRepository {
         
         // Avanzar al siguiente lote de meses
         mesInicial += TAMANO_LOTE;
-      }
       
       console.log(`[${nombreRepositorio}] Total de saldos obtenidos: ${saldos.length}`);
       
