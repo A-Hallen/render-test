@@ -50,7 +50,7 @@ function App() {
                   <Route path="/visualizacion-3d" element={<Visualizacion3D />} />
                   <Route path="/sincronizacion" element={<Sincronizacion />} />
                   <Route path="/indicadores-contables" element={<IndicadoresContables />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/*" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications-test" element={<NotificationsTest />} />
                 </Route>

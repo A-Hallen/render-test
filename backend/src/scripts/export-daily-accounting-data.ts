@@ -11,7 +11,7 @@ import { sequelize } from '../database/database.connection';
 import { QueryTypes } from 'sequelize';
 
 // Directorio donde se guardarán los archivos JSON
-const OUTPUT_DIR = path.join(__dirname, '../../data/accounting-exports/marzo-faltante');
+const OUTPUT_DIR = path.join(__dirname, '../../data/accounting-exports/abril');
 
 // Asegurarse de que el directorio exista
 if (!fs.existsSync(OUTPUT_DIR)) {
@@ -78,10 +78,10 @@ async function main() {
     
     // Generar array de fechas del 1 al 29 de octubre de 2024
     const dates: string[] = [];
-    for (let day = 30; day <= 31; day++) {
+    for (let day = 1; day <= 30; day++) {
       // Formatear el día con ceros a la izquierda si es necesario
       const formattedDay = day.toString().padStart(2, '0');
-      dates.push(`2025-03-${formattedDay}`);
+      dates.push(`2025-04-${formattedDay}`);
     }
     
     // Procesar cada fecha secuencialmente para evitar sobrecargar la API

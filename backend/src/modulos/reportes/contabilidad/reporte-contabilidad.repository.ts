@@ -1,17 +1,10 @@
-import { ConfiguracionReporteContabilidad as ConfiguracionReporte } from '../../configuracion-reportes/contabilidad/configuracion-reportes-contabilidad.model';
-import { ReporteContabilidad } from './reporte-contabilidad.model';
 import { SaldosRepository } from '../../saldosContables/saldos.repository';
-import { sequelize } from '../../../database/database.connection';
-import { QueryTypes } from 'sequelize';
-import {
-  TABLA_CUENTACONTABLE,
-  TABLA_DIVISION,
-  TABLA_SALDOCONTABLE
-} from '../../../database/database.constants';
+
 import {
   CuentaData
 } from 'shared/src/types/reportes.types';
 import { ConfiguracionReportesContabilidadRepository } from '../../configuracion-reportes/contabilidad/configuracion-reportes-contabilidad.repository';
+import { CuentasContablesRepository } from '../../cuentas-contables/cuentas-contables.repository';
 // Interfaces para las solicitudes y respuestas
 interface ReporteContabilidadRequest {
   fechaInicio?: string;
@@ -49,16 +42,14 @@ interface ResultadoReporteContabilidad {
 }
 
 export class ReporteContabilidadRepository {
-  model;
-  private sequelize;
   private saldosRepository;
   private configuracionReportesContabilidadRepository;
+  private cuentasContablesRepository;
 
   constructor() {
-    this.model = ReporteContabilidad;
     this.saldosRepository = new SaldosRepository();
-    this.sequelize = sequelize;
     this.configuracionReportesContabilidadRepository = new ConfiguracionReportesContabilidadRepository();
+    this.cuentasContablesRepository = CuentasContablesRepository.getInstance();
     // Usamos directamente el modelo ConfiguracionReporte para las consultas
   }
 
@@ -317,13 +308,10 @@ export class ReporteContabilidadRepository {
         descripcionPeriodo
       };
 
-      // Guardar el reporte en la base de datos
-      const reporteGuardado = await ReporteContabilidad.create(resultado as any);
-
       return {
         success: true,
         message: 'Reporte generado correctamente',
-        data: reporteGuardado
+        data: resultado
       };
     } catch (error: any) {
       console.error('Error al generar reporte de contabilidad:', error);
@@ -344,258 +332,8 @@ export class ReporteContabilidadRepository {
       return [];
     }
 
-    const query = `
-      SELECT D.CODIGO, D.NOMBRE
-      FROM \`${TABLA_DIVISION}\` D 
-      INNER JOIN \`${TABLA_CUENTACONTABLE}\` CC ON CC.SECUENCIALDIVISION = D.SECUENCIAL
-      WHERE D.CODIGO IN (:cuentas)
-      AND CC.ESTAACTIVA = TRUE
-    `;
-    
-    const cuentaData = await this.sequelize.query(query, {
-      replacements: { cuentas },
-      type: QueryTypes.SELECT
-    });
-    
-    return cuentaData;
-  };
-
-  /**
-   * Calcula una parte específica de la fórmula para el reporte de contabilidad
-   * @param cuentas Códigos de las cuentas a incluir en el cálculo
-   * @param fecha Fecha para la cual calcular los saldos
-   * @param oficina Código de la oficina
-   * @returns Resultado del cálculo
-   */
-  _calcularParteDeLaFormula = async (cuentas: string[], fecha: Date, oficina: string) => {
-    if (!cuentas || cuentas.length === 0) {
-      return 0;
-    }
-
-    const fechaStr = fecha.toISOString().split('T')[0];
-    
-    const query = `
-      SELECT SUM(SC.SALDO) as TOTAL
-      FROM \`${TABLA_SALDOCONTABLE}\` SC
-      INNER JOIN \`${TABLA_CUENTACONTABLE}\` CC ON SC.SECUENCIALCUENTACONTABLE = CC.SECUENCIAL
-      INNER JOIN \`${TABLA_DIVISION}\` D ON CC.SECUENCIALDIVISION = D.SECUENCIAL
-      WHERE D.CODIGO IN (:cuentas)
-      AND SC.FECHA = :fecha
-      AND SC.CODIGOOFICINA = :oficina
-    `;
-    
-    const resultado = await this.sequelize.query(query, {
-      replacements: { cuentas, fecha: fechaStr, oficina },
-      type: QueryTypes.SELECT
-    });
-    
-    const result = resultado[0] as { TOTAL?: number } || {};
-    return result.TOTAL || 0;
-  };
-
-  /**
-   * Obtiene los datos históricos de contabilidad para un rango de fechas
-   * @param fechaInicio Fecha de inicio del rango
-   * @param fechaFin Fecha de fin del rango
-   * @param oficina Código de la oficina
-   * @param nombreConfiguracion Nombre de la configuración del reporte
-   * @returns Datos históricos de contabilidad
-   */
-  obtenerDatosHistoricos = async (
-    fechaInicio: string,
-    fechaFin: string,
-    oficina: string,
-    nombreConfiguracion: string,
-    tipoReporte: 'diario' | 'mensual' = 'mensual'
-  ) => {
-    try {
-      // Verificar si la configuración existe
-      const configuracion = await ConfiguracionReporte.findOne({
-        where: { nombre: nombreConfiguracion, esActivo: true }
-      });
-      
-      if (!configuracion) {
-        return {
-          success: false,
-          message: 'Configuración de reporte no encontrada o inactiva'
-        };
-      }
-
-      // Buscar reportes existentes por oficina
-      const reportesExistentes = await ReporteContabilidad.findAll({
-        where: {
-          oficina,
-          nombreConfiguracion,
-          esActivo: true
-        },
-        order: [['fechaFin', 'ASC']]
-      });
-
-      // Filtrar reportes que estén dentro del rango de fechas solicitado
-      const reportesFiltrados = reportesExistentes.filter(reporte => {
-        // Verificar si el rango de fechas del reporte se superpone con el rango solicitado
-        return (
-          (reporte.fechaInicio <= fechaFin && reporte.fechaFin >= fechaInicio) ||
-          (reporte.fechaInicio >= fechaInicio && reporte.fechaInicio <= fechaFin) ||
-          (reporte.fechaFin >= fechaInicio && reporte.fechaFin <= fechaFin)
-        );
-      });
-      
-      console.log("[repository] Reportes filtrados:", reportesFiltrados.length);
-
-      // Si hay reportes existentes filtrados, devolverlos
-      if (reportesFiltrados && reportesFiltrados.length > 0) {
-        return {
-          success: true,
-          message: 'Datos históricos obtenidos correctamente',
-          data: reportesFiltrados
-        };
-      }
-
-      // Si no hay reportes existentes, generar un único reporte para todo el rango
-      const reporteData: ReporteContabilidadRequest = {
-        fechaInicio,
-        fechaFin,
-        oficina,
-        nombreConfiguracion,
-        tipoReporte
-      };
-      
-      const resultado = await this.generarReporteContabilidad(reporteData);
-      
-      if (resultado.success && resultado.data) {
-        return {
-          success: true,
-          message: 'Datos históricos generados correctamente',
-          data: [resultado.data]
-        };
-      }
-
-      return {
-        success: false,
-        message: 'No se pudieron generar los datos históricos',
-        data: []
-      };
-    } catch (error: any) {
-      console.error('Error al obtener datos históricos:', error);
-      return {
-        success: false,
-        message: `Error al obtener datos históricos: ${error.message || 'Error desconocido'}`
-      };
-    }
-  };
-  
-  /**
-   * Obtiene un reporte de contabilidad por su ID
-   * @param id ID del reporte
-   * @returns Reporte de contabilidad o null si no existe
-   */
-  obtenerReportePorId = async (id: number) => {
-    try {
-      const reporte = await ReporteContabilidad.findOne({
-        where: { id, esActivo: true }
-      });
-      
-      return reporte;
-    } catch (error) {
-      console.error('Error al obtener reporte por ID:', error);
-      throw error;
-    }
-  };
-  
-  /**
-   * Obtiene todos los reportes de contabilidad para una oficina
-   * @param oficina Código de la oficina
-   * @returns Lista de reportes de contabilidad
-   */
-  obtenerReportesPorOficina = async (oficina: string) => {
-    try {
-      const reportes = await ReporteContabilidad.findAll({
-        where: { oficina, esActivo: true },
-        order: [['fechaFin', 'DESC']]
-      });
-      
-      return reportes;
-    } catch (error) {
-      console.error('Error al obtener reportes por oficina:', error);
-      throw error;
-    }
-  };
-  
-  /**
-   * Actualiza un reporte de contabilidad existente
-   * @param id ID del reporte a actualizar
-   * @param datos Datos actualizados del reporte
-   * @returns Resultado de la actualización
-   */
-  actualizarReporte = async (id: number, datos: any) => {
-    try {
-      const reporte = await ReporteContabilidad.findOne({
-        where: { id, esActivo: true }
-      });
-      
-      if (!reporte) {
-        return {
-          success: false,
-          message: 'Reporte no encontrado'
-        };
-      }
-      
-      // Actualizar solo los campos permitidos
-      await reporte.update({
-        ...datos,
-        fechaModificacion: new Date()
-      });
-      
-      return {
-        success: true,
-        message: 'Reporte actualizado correctamente',
-        data: reporte
-      };
-    } catch (error: any) {
-      console.error('Error al actualizar reporte:', error);
-      return {
-        success: false,
-        message: `Error al actualizar reporte: ${error.message || 'Error desconocido'}`
-      };
-    }
-  };
-  
-  /**
-   * Elimina lógicamente un reporte de contabilidad
-   * @param id ID del reporte a eliminar
-   * @returns Resultado de la eliminación
-   */
-  eliminarReporte = async (id: number) => {
-    try {
-      const reporte = await ReporteContabilidad.findOne({
-        where: { id, esActivo: true }
-      });
-      
-      if (!reporte) {
-        return {
-          success: false,
-          message: 'Reporte no encontrado'
-        };
-      }
-      
-      // Eliminación lógica
-      await reporte.update({
-        esActivo: false,
-        fechaModificacion: new Date()
-      });
-      
-      return {
-        success: true,
-        message: 'Reporte eliminado correctamente'
-      };
-    } catch (error: any) {
-      console.error('Error al eliminar reporte:', error);
-      return {
-        success: false,
-        message: `Error al eliminar reporte: ${error.message || 'Error desconocido'}`
-      };
-    }
+    const cuentasData = this.cuentasContablesRepository.obtenerCuentasPorCodigos(cuentas);
+    return cuentasData;
   };
 
   /**

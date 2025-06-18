@@ -1,4 +1,3 @@
-import { ConfiguracionReporteContabilidad } from "./configuracion-reportes-contabilidad.model";
 import { ConfiguracionReportesContabilidadRepository } from "./configuracion-reportes-contabilidad.repository";
 import {
   ApiResponse,
@@ -87,14 +86,7 @@ export class ConfiguracionReportesContabilidadService {
     configuracion: ConfiguracionReporteDTO
   ): Promise<ConfiguracionGuardadaResponse> {
     //convertir al modelo para guardar en la bd mapeando sus propiedades
-    const configuracionModel = new ConfiguracionReporteContabilidad();
-    configuracionModel.nombre = configuracion.nombre;
-    configuracionModel.descripcion = configuracion.descripcion;
-    configuracionModel.categorias = configuracion.categorias;
-    configuracionModel.esActivo = configuracion.esActivo;
-    configuracionModel.fechaCreacion = new Date();
-    configuracionModel.fechaModificacion = new Date();
-    await this.configuracionReportesContabilidadRepository.crear(configuracionModel.toDbObject());
+    await this.configuracionReportesContabilidadRepository.crear(configuracion);
     return {
       success: true,
       message: "Configuración guardada correctamente",

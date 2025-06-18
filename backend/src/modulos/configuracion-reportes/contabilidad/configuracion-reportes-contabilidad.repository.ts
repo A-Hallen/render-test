@@ -3,34 +3,26 @@ import {
   CuentaData,
   ReporteTendenciaRequest,
 } from "shared/src/types/reportes.types";
-import { BaseRepository } from "../../../base/base.repository";
-import { ConfiguracionReporteContabilidad } from "./configuracion-reportes-contabilidad.model";
 import { SaldosRepository } from "../../saldosContables/saldos.repository";
 import { SaldosContables } from "../../saldosContables/saldos.model";
-import { sequelize } from "../../../database/database.connection";
-import { QueryTypes, WhereOptions } from "sequelize";
-import {
-  TABLA_CONFIGURACIONES_REPORTES,
-  TABLA_CUENTACONTABLE,
-  TABLA_DIVISION,
-} from "../../../database/database.constants";
 import { BaseFirebaseRepository } from "../../../base/base.firebaseRepository";
+import { CuentasContablesRepository } from "../../cuentas-contables/cuentas-contables.repository";
 
-export class ConfiguracionReportesContabilidadRepository extends BaseFirebaseRepository<ConfiguracionReporteContabilidad> {
+export class ConfiguracionReportesContabilidadRepository extends BaseFirebaseRepository<ConfiguracionReporteDTO> {
   constructor() {
     super("configuracionesReportesContabilidad");
     this.saldosRepository = new SaldosRepository();
-    this.sequelize = sequelize;
+    this.cuentasContablesRepository = CuentasContablesRepository.getInstance();
   }
 
-  private sequelize;
   private saldosRepository;
+  private cuentasContablesRepository;
 
   obtenerConfiguracionesActivas = async () => {
     const query = this.collection.where("esActivo", "==", true);
     const snapshot = await query.get();
     return snapshot.docs.map(
-      (doc) => doc.data() as ConfiguracionReporteContabilidad
+      (doc) => doc.data() as ConfiguracionReporteDTO
     );
   };
 
@@ -38,21 +30,14 @@ export class ConfiguracionReportesContabilidadRepository extends BaseFirebaseRep
     const query = this.collection.where("nombre", "==", nombre).limit(1);
     const snapshot = await query.get();
     return snapshot.docs.map(
-      (doc) => doc.data() as ConfiguracionReporteContabilidad
+      (doc) => doc.data() as ConfiguracionReporteDTO
     )[0];
   };
 
+
   obtenerCuentas = async (): Promise<CuentaData[]> => {
-    const query = `
-        SELECT D.CODIGO, D.NOMBRE
-        FROM \`${TABLA_DIVISION}\` D 
-        INNER JOIN \`${TABLA_CUENTACONTABLE}\` CC ON CC.SECUENCIALDIVISION = D.SECUENCIAL
-        WHERE CC.ESTAACTIVA = TRUE
-      `;
-    const cuentaData = await this.sequelize.query(query, {
-      type: QueryTypes.SELECT,
-    });
-    return cuentaData as CuentaData[];
+    // Usar el nuevo repositorio de Firebase en lugar de la consulta SQL directa
+    return this.cuentasContablesRepository.obtenerCuentas();
   };
 
   generarReporteTendencia = async (reporteData: ReporteTendenciaRequest) => {
@@ -71,7 +56,7 @@ export class ConfiguracionReportesContabilidadRepository extends BaseFirebaseRep
     }
 
     const configuracion =
-      snapshot.docs[0].data() as ConfiguracionReporteContabilidad;
+      snapshot.docs[0].data() as ConfiguracionReporteDTO;
     if (!configuracion) {
       throw new Error("Configuración no encontrada");
     }
@@ -176,18 +161,8 @@ export class ConfiguracionReportesContabilidadRepository extends BaseFirebaseRep
   };
 
   obtenerNombressCuenta = async (cuentas: string[]) => {
-    const query = `
-        SELECT D.CODIGO, D.NOMBRE
-        FROM \`${TABLA_DIVISION}\` D 
-        INNER JOIN \`${TABLA_CUENTACONTABLE}\` CC ON CC.SECUENCIALDIVISION = D.SECUENCIAL
-        WHERE D.CODIGO IN (:cuentas)
-        AND CC.ESTAACTIVA = TRUE
-      `;
-    const cuentaData = await this.sequelize.query(query, {
-      replacements: { cuentas },
-      type: QueryTypes.SELECT,
-    });
-    return cuentaData;
+    // Usar el nuevo repositorio de Firebase en lugar de la consulta SQL directa
+    return this.cuentasContablesRepository.obtenerCuentasPorCodigos(cuentas);
   };
 
   generarFechasPorPeriodo(

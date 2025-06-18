@@ -3,15 +3,6 @@ import { SaldosRepository } from "../../saldosContables/saldos.repository";
 import { KPICalculado } from "../interfaces/KPICalculado.interface";
 import { calcularKPIContable } from "./calcularKPIContable";
 import { SaldosContables } from "../../saldosContables/saldos.model";
-import { Component } from "shared/src/types/indicadores.types";
-
-// Extender la interfaz IndicadorContable para incluir los campos necesarios para el cálculo
-interface IndicadorContableExtendido extends IndicadorContable {
-  numerador: any;
-  denominador: any;
-  numeradorAbsoluto: boolean;
-  denominadorAbsoluto: boolean;
-}
 
 /**
  * Extrae todos los códigos de cuentas contables únicos de los indicadores

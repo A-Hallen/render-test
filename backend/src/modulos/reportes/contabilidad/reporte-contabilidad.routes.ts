@@ -12,19 +12,8 @@ router.post('/', reporteContabilidadController.generarReporteContabilidad.bind(r
 // Rutas para reportes por rango de fechas
 router.post('/rango', reporteContabilidadController.generarReportePorRango.bind(reporteContabilidadController));
 
-// Rutas para datos históricos
-router.post('/historico', reporteContabilidadController.obtenerDatosHistoricos.bind(reporteContabilidadController));
-
 // Ruta para reportes consolidados
 router.post('/consolidado', reporteContabilidadController.generarReporteConsolidado.bind(reporteContabilidadController));
-
-// Rutas para obtener reportes
-router.get('/oficina/:oficina', reporteContabilidadController.obtenerReportesPorOficina.bind(reporteContabilidadController));
-router.get('/:id', reporteContabilidadController.obtenerReportePorId.bind(reporteContabilidadController));
-
-// Rutas para actualizar y eliminar reportes
-router.put('/:id', reporteContabilidadController.actualizarReporte.bind(reporteContabilidadController));
-router.delete('/:id', reporteContabilidadController.eliminarReporte.bind(reporteContabilidadController));
 
 // Rutas para exportación de reportes
 router.post('/exportar/excel', exportController.exportarReportePorRangoExcel.bind(exportController));

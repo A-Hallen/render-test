@@ -1,5 +1,3 @@
-import * as admin from 'firebase-admin';
-import { IndicadorContable } from "../indicadores-contables/interfaces/IndicadorContable.interface";
 import { devolverKPIsPorOficinaRangoFechas } from "./transformers/devolverKPIsPorOficinaRangoFechas";
 import { IndicadoresContablesRepository } from "../indicadores-contables/indicadores-contables.repository";
 import { KPICalculado } from "./interfaces/KPICalculado.interface";

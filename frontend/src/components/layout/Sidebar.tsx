@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   MessageSquare, 
@@ -16,7 +16,14 @@ import {
   Banknote,
   Box,
   Bell,
-  Image
+  Image,
+  Globe,
+  User,
+  Lock,
+  Calculator,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
@@ -37,6 +44,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
   useAuth().profileVersion;
   // Obtener datos de la cooperativa para mostrar el logo
   const { cooperativa } = useData();
+  // Estado para controlar la expansión del menú de configuración
+  const [configExpanded, setConfigExpanded] = useState(false);
+  // Obtener la ruta actual para resaltar el elemento activo
+  const location = useLocation();
+  // Referencia al contenedor del submenú para hacer scroll
+  const configButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Efecto para hacer scroll cuando se expande el menú de configuración
+  useEffect(() => {
+    if (configExpanded && configButtonRef.current) {
+      // Pequeño timeout para asegurar que la animación comience antes del scroll
+      setTimeout(() => {
+        configButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [configExpanded]);
+  
+  // Definir los elementos de configuración
+  const configItems = [
+    ...(user?.role === UserRole.ADMIN ? [{ name: 'General', icon: <Globe size={18} />, path: '/settings/general' }] : []),
+    { name: 'Indicadores', icon: <Calculator size={18} />, path: '/settings/indicadores' },
+    { name: 'Usuario', icon: <User size={18} />, path: '/settings/user' },
+    { name: 'Seguridad', icon: <Lock size={18} />, path: '/settings/security' },
+    { name: 'Fuentes de Datos', icon: <Database size={18} />, path: '/settings/dataSource' },
+    { name: 'Notificaciones', icon: <Bell size={18} />, path: '/settings/notifications' },
+    { name: 'Umbrales', icon: <AlertTriangle size={18} />, path: '/settings/thresholds' },
+  ];
+
+  // Verificar si alguna ruta de configuración está activa
+  const isConfigActive = location.pathname.startsWith('/settings');
 
   const navItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
@@ -53,7 +90,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
     ...(user?.role === UserRole.ADMIN ? [{ name: 'Sincronización', icon: <Database size={20} />, path: '/sincronizacion' }] : []),
     // Añadir enlace a la página de prueba de notificaciones
     ...(user?.role === UserRole.ADMIN ? [{ name: 'Prueba Notificaciones', icon: <Bell size={20} />, path: '/notifications-test' }] : []),
-    { name: 'Configuración', icon: <Settings size={20} />, path: '/settings' },
   ];
   
   return (
@@ -122,6 +158,68 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
               {!collapsed && <span className="ml-3">{item.name}</span>}
             </NavLink>
           ))}
+          
+          {/* Configuración con submenú */}
+          <div className="relative">
+            <button
+              ref={configButtonRef}
+              className={`w-full flex items-center py-2 px-3 rounded-md transition duration-150 ease-in-out
+                ${isConfigActive
+                  ? 'bg-blue-800 text-white' 
+                  : 'text-blue-100 hover:bg-blue-800 hover:text-white'}
+                ${collapsed ? 'justify-center' : 'justify-between'}
+              `}
+              onClick={() => {
+                if (!collapsed) {
+                  setConfigExpanded(!configExpanded);
+                } else if (isMobile && setCollapsed) {
+                  // Si está colapsado, expandir el sidebar primero
+                  setCollapsed(false);
+                }
+              }}
+            >
+              <div className="flex items-center">
+                <span><Settings size={20} /></span>
+                {!collapsed && <span className="ml-3">Configuración</span>}
+              </div>
+              {!collapsed && (
+                <span>
+                  {configExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </span>
+              )}
+            </button>
+            
+            {/* Submenú de configuración con animación */}
+            <div 
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${!collapsed ? 'max-h-96' : 'max-h-0'} ${configExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+            >
+              {!collapsed && (
+              <div className="mt-1 ml-6 space-y-1">
+                {configItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => {
+                      // Close sidebar on mobile when a link is clicked
+                      if (isMobile && setCollapsed) {
+                        setCollapsed(true);
+                      }
+                    }}
+                    className={({ isActive }) => `
+                      flex items-center py-1.5 px-3 rounded-md transition duration-150 ease-in-out text-sm
+                      ${isActive 
+                        ? 'bg-blue-700 text-white' 
+                        : 'text-blue-100 hover:bg-blue-700 hover:text-white'}
+                    `}
+                  >
+                    <span>{item.icon}</span>
+                    <span className="ml-2">{item.name}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )}
+            </div>
+          </div>
         </nav>
       </div>
       
