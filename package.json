@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "cd backend && npm run start",
-    "build": "cd backend && npm run build", 
+    "build": "cd shared && npm install && npm run build && cd ../backend && npm install && npm run build", 
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
