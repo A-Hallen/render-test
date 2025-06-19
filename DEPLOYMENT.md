@@ -2,54 +2,6 @@
 
 ## 1. Preparación Local
 
-### 1.1 Instalar Docker Desktop
-1. Descargar Docker Desktop para Windows desde: https://www.docker.com/products/docker-desktop/
-2. Requisitos previos:
-   - Windows 10 Pro/Enterprise o Windows 11
-   - WSL 2 habilitado
-   - Al menos 8GB de RAM (para frontend y backend)
-   - Sistema operativo de 64 bits
-3. Activar WSL 2 (Windows Subsystem for Linux 2):
-   a. Abrir PowerShell como administrador y ejecutar:
-   ```powershell
-   wsl --install
-   ```
-   
-   b. Reiniciar la computadora
-   
-   c. Verificar instalación:
-   ```powershell
-   wsl --list --verbose
-   ```
-   
-   d. Si no se instaló automáticamente, seguir estos pasos:
-   - Habilitar características de Windows:
-     ```powershell
-     dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
-     dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
-     ```
-   - Instalar kernel WSL:
-     ```powershell
-     wsl --install
-     ```
-   - Reiniciar la computadora
-
-4. Instalar Docker Desktop
-   - Descargar desde: https://www.docker.com/products/docker-desktop/
-   - Ejecutar el instalador
-   - Durante la instalación, asegurarse de seleccionar WSL 2 como backend
-   - Reiniciar la computadora si es necesario
-
-5. Verificar instalación:
-   ```bash
-   docker --version
-   ```
-
-### 1.2 Configurar AWS CLI
-1. Instalar AWS CLI
-   - Descargar desde: https://awscli.amazonaws.com/AWSCLIV2.msi
-   - Ejecutar el instalador
-
 ### 1.3 Obtener Credenciales de AWS
 
 1. Crear cuenta en AWS:
@@ -137,30 +89,6 @@
    - `shared/`: Código compartido
    - `backend/`: API y servicios
    - `frontend/`: Interfaz de usuario
-
-### 2.2 Construir Imágenes
-1. Construir imágenes con Docker Compose:
-   ```bash
-   docker-compose build
-   ```
-
-2. Verificar imágenes construidas:
-   ```bash
-   docker images
-   ```
-
-### 2.3 Variables de Entorno
-1. Backend:
-   ```
-   NODE_ENV=production
-   PORT=3000
-   # Otras variables según necesidad
-   ```
-
-2. Frontend:
-   ```
-   VITE_API_URL=http://backend:3000
-   ```
 
 ## 3. Despliegue en AWS
 
@@ -406,52 +334,6 @@
    - Verificar estado de servicios
    - Verificar costos mensuales
 
-## 1. Preparación Local
-
-### 1.1 Instalar Docker Desktop
-1. Descargar Docker Desktop para Windows desde: https://www.docker.com/products/docker-desktop/
-2. Requisitos previos:
-   - Windows 10 Pro/Enterprise o Windows 11
-   - WSL 2 habilitado
-   - Al menos 4GB de RAM
-   - Sistema operativo de 64 bits
-3. Activar WSL 2 (Windows Subsystem for Linux 2):
-   a. Abrir PowerShell como administrador y ejecutar:
-   ```powershell
-   wsl --install
-   ```
-   
-   b. Reiniciar la computadora
-   
-   c. Verificar instalación:
-   ```powershell
-   wsl --list --verbose
-   ```
-   
-   d. Si no se instaló automáticamente, seguir estos pasos:
-   - Habilitar características de Windows:
-     ```powershell
-     dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
-     dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
-     ```
-   - Instalar kernel WSL:
-     ```powershell
-     wsl --install
-     ```
-   - Reiniciar la computadora
-
-4. Instalar Docker Desktop
-   - Descargar desde: https://www.docker.com/products/docker-desktop/
-   - Ejecutar el instalador
-   - Durante la instalación, asegurarse de seleccionar WSL 2 como backend
-   - Reiniciar la computadora si es necesario
-
-5. Verificar instalación:
-   ```bash
-   docker --version
-   ```
-
-### 1.2 Configurar AWS CLI
 1. Instalar AWS CLI
    - Descargar desde: https://awscli.amazonaws.com/AWSCLIV2.msi
    - Ejecutar el instalador

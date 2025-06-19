@@ -28,16 +28,16 @@ export class CuentasContablesRepository extends BaseFirebaseRepository<CuentaDat
    */
   async obtenerCuentas(): Promise<CuentaData[]> {
     try {
-      const query = this.collection.where('estaActiva', '==', true);
-      const snapshot = await query.get();
+      const snapshot = await this.collection.get();
       
-      return snapshot.docs.map(doc => {
+      const res = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
-          CODIGO: data.codigo,
-          NOMBRE: data.nombre
+          CODIGO: data.CODIGO,
+          NOMBRE: data.NOMBRE
         } as CuentaData;
       });
+      return res;
     } catch (error) {
       console.error('Error al obtener cuentas contables:', error);
       throw error;

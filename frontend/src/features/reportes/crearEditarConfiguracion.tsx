@@ -285,7 +285,7 @@ export const CrearEditarConfiguracionView = forwardRef<
   };
 
   const getCuentaPorCodigo = (codigo: string) => {
-    return cuentas.find((c) => c.CODIGO.toString() === codigo);
+    return cuentas.find((c) => c?.CODIGO?.toString() === codigo);
   };
 
   if (!isOpen) return null;
