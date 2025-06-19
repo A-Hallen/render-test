@@ -1,0 +1,18 @@
+# Directories
+frontend/
+shared/
+
+# Files
+.env
+.env.local
+.gitignore
+README.md
+package.json
+package-lock.json
+
+# Node modules
+node_modules/
+
+# Build files
+*.log
+*.tsbuildinfo
