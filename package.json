@@ -10,6 +10,7 @@
     "start": "cd backend && npm run start",
     "build": "cd backend && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "vercel": "cd backend && vercel",
     "vercel-build": "cd backend && npm run build",
     "vercel-start": "cd backend && npm run start"
   },
