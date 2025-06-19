@@ -2,15 +2,17 @@
   "name": "ais-asistente",
   "version": "1.0.0",
   "description": "Sistema de gestión financiera para cooperativas con funcionalidades de análisis contable, reportes personalizados e inteligencia artificial.",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "private": true,
+  "workspaces": [
+    "backend",
+    "shared"
+  ],
   "scripts": {
-    "start": "cd backend && npm run start",
-    "build": "cd shared && npm install && npm run build && cd ../backend && npm install && npm run build", 
+    "start": "npm run start --workspace=backend",
+    "build": "npm run build --workspace=shared && npm run build --workspace=backend",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "vercel-start": "cd backend && npm run start"
+    "vercel-build": "npm run build",
+    "vercel-start": "npm run start --workspace=backend"
   },
   "repository": {
     "type": "git",
@@ -25,8 +27,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "dependencies": {
-    "express": "^4.18.2",
+  "devDependencies": {
     "@vercel/node": "^1.0.0"
   }
 }
