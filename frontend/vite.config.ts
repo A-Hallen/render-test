@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: "https://ais-asistente-backend.vercel.app",
+        target: "https://render-test-k9dg.onrender.com/",
         changeOrigin: true,
         secure: false
       }
