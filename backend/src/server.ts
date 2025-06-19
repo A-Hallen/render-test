@@ -15,6 +15,7 @@ import cooperativaRoutes from './modulos/cooperativa/cooperativa.routes';
 // El módulo de indicadores original ha sido eliminado como parte de la refactorización
 import { ValidationError } from 'sequelize';
 import { sincronizacionService } from './database/SincronizacionService';
+
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 import './config/firebase.config';
