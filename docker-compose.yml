@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"      # Puerto para el frontend (nginx)
+      - "3000:3000"  # Puerto para el backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./backend:/usr/src/backend
+      - ./frontend:/usr/src/frontend
+      - ./shared:/usr/src/shared

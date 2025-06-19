@@ -1,0 +1,77 @@
+# Directorios de dependencias
+**/node_modules
+**/dist
+**/coverage
+**/build
+**/.next
+**/.nuxt
+**/.cache
+**/.output
+
+# Archivos de entorno y configuración
+**/.env
+**/.env.local
+**/.env.development
+**/.env.test
+**/.env.production
+# Permitir archivos .env.docker
+!**/.env.docker
+
+# Archivos de log y temporales
+**/*.log
+**/*.tmp
+**/*.temp
+**/*.bak
+**/.temp*
+
+# Archivos de sistema
+**/.DS_Store
+**/.Thumbs.db
+
+# Archivos de control de versiones
+**/.git
+**/.gitignore
+**/.gitattributes
+**/.svn
+**/.hg
+
+# Archivos de documentación
+**/*.md
+**/LICENSE
+**/docs
+
+# Archivos de configuración de Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Archivos de configuración de IDE
+**/.vscode
+**/.idea
+**/.vs
+**/*.sublime*
+**/*.swp
+**/*.swo
+
+# Archivos de caché y compilación
+**/*.tsbuildinfo
+**/*.map
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Archivos específicos del proyecto
+.temp-indicadores
+
+# Excluir archivos grandes
+**/*.mp4
+**/*.mov
+**/*.avi
+**/*.mkv
+**/*.iso
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.rar
+**/*.7z
