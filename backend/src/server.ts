@@ -76,13 +76,15 @@ app.get('/', (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
 });
 
-app.listen(port, () => {
-    console.log(`Servidor escuchando en http://localhost:${port}`);
+// app.listen(port, () => {
+//     console.log(`Servidor escuchando en http://localhost:${port}`);
     
-    // Sincronización deshabilitada temporalmente
-    console.log('La sincronización automática está deshabilitada temporalmente');
-    // Para habilitar la sincronización, configurar ENABLE_SYNC=true en el archivo .env
-});
+//     // Sincronización deshabilitada temporalmente
+//     console.log('La sincronización automática está deshabilitada temporalmente');
+//     // Para habilitar la sincronización, configurar ENABLE_SYNC=true en el archivo .env
+// });
+
+export default app;
 
 // Manejar señales de terminación para cerrar correctamente las conexiones
 process.on('SIGINT', async () => {

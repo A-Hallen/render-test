@@ -9,7 +9,9 @@
   "scripts": {
     "start": "cd backend && npm run start",
     "build": "cd shared && npm install && npm run build && cd ../backend && npm install && npm run build", 
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "vercel-build": "cd backend && npm run build",
+    "vercel-start": "cd backend && npm run start"
   },
   "repository": {
     "type": "git",
