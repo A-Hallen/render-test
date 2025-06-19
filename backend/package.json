@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
@@ -11,7 +11,12 @@
     "export-accounting": "ts-node src/scripts/export-daily-accounting-data.ts",
     "sync": "ts-node src/scripts/iniciarSincronizacion.ts",
     "sync:dev": "nodemon --exec ts-node src/scripts/iniciarSincronizacion.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "vercel-build": "tsc",
+    "vercel-start": "node dist/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",

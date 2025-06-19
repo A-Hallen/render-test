@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/achiong-angia/ais-asistente/issues"
   },
-  "homepage": "https://github.com/achiong-angia/ais-asistente#readme"
+  "homepage": "https://github.com/achiong-angia/ais-asistente#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
