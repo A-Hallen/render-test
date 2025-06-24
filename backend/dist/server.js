@@ -73,17 +73,6 @@ app.use(express_1.default.static(path_1.default.join(__dirname, '../../frontend/
 app.get('/', (req, res) => {
     res.sendFile(path_1.default.join(__dirname, '../../frontend/dist/index.html'));
 });
-// // Para Vercel
-// if (process.env.VERCEL === '1') {
-//     console.log('Servidor corriendo en Vercel');
-// } else {
-//     // Para desarrollo local
-//     const PORT = process.env.PORT || 3000;
-//     app.listen(PORT, () => {
-//         console.log(`Servidor escuchando en http://localhost:${PORT}`);
-//         console.log('La sincronización automática está deshabilitada temporalmente');
-//     });
-// }
 app.listen(port, () => {
     console.log(`Servidor escuchando en http://localhost:${port}`);
     console.log('La sincronización automática está deshabilitada temporalmente');

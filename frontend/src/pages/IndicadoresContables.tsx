@@ -28,7 +28,7 @@ interface FiltrosIndicadores {
   fecha: string;
 }
 
-// Usamos el servicio centralizado para indicadores contables
+// Usamos el servicio centralizado para indicadores financieros
 
 export const IndicadoresContables: React.FC = () => {
   const [indicadores, setIndicadores] = useState<IndicadorContable[]>([]);
@@ -190,8 +190,8 @@ export const IndicadoresContables: React.FC = () => {
       
       setIndicadores(indicadoresProcesados);
     } catch (err: any) {
-      console.error('Error al cargar indicadores contables:', err);
-      setError(err.message || 'Error al cargar indicadores contables');
+      console.error('Error al cargar indicadores financieros:', err);
+      setError(err.message || 'Error al cargar indicadores financieros');
     } finally {
       setCargando(false);
     }
@@ -250,9 +250,9 @@ export const IndicadoresContables: React.FC = () => {
 
   return (
     <>
-      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      <div className="space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Indicadores Contables</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Indicadores financieros</h1>
         <div className="text-sm text-gray-500">
           <span className="mr-2">Última actualización:</span>
           <span className="font-medium">{new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
@@ -380,7 +380,7 @@ export const IndicadoresContables: React.FC = () => {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             </div>
-            <p className="text-gray-800 font-medium text-lg">Cargando indicadores contables</p>
+            <p className="text-gray-800 font-medium text-lg">Cargando indicadores financieros</p>
             <p className="text-sm text-gray-500 mt-2">Esto puede tomar unos segundos</p>
           </div>
         </div>
@@ -437,7 +437,7 @@ export const IndicadoresContables: React.FC = () => {
             </svg>
             <div>
               <p className="font-medium mb-1">Acerca de los indicadores</p>
-              <p>Los indicadores contables muestran el rendimiento financiero de la oficina seleccionada. Un valor mayor indica mejor desempeño.</p>
+              <p>Los indicadores financieros muestran el rendimiento financiero de la oficina seleccionada. Un valor mayor indica mejor desempeño.</p>
             </div>
           </div>
         </div>

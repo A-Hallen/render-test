@@ -12,6 +12,7 @@ import { Deposits } from './pages/Deposits';
 import { Visualizacion3D } from './pages/Visualizacion3D';
 import { Sincronizacion } from './pages/Sincronizacion';
 import { IndicadoresContables } from './pages/IndicadoresContables';
+import { IndicadoresFinancierosComparacion } from './pages/IndicadoresFinancierosComparacion';
 import Profile from './pages/Profile';
 import { NotificationsTest } from './pages/NotificationsTest';
 import { AuthProvider } from './context/AuthContext';
@@ -50,6 +51,7 @@ function App() {
                   <Route path="/visualizacion-3d" element={<Visualizacion3D />} />
                   <Route path="/sincronizacion" element={<Sincronizacion />} />
                   <Route path="/indicadores-contables" element={<IndicadoresContables />} />
+                  <Route path="/indicadores-comparacion" element={<IndicadoresFinancierosComparacion />} />
                   <Route path="/settings/*" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications-test" element={<NotificationsTest />} />

@@ -65,49 +65,12 @@ const devolverKPIsPorOficinaRangoFechas = async (indicadores, oficina, inicio, f
                 fechaInicioObj = new Date();
                 fechaFinObj = new Date();
             }
-            // Generar arrays solo con las fechas de fin de mes entre inicio y fin
-            const fechasStr = [];
-            const fechasDate = [];
-            const fechaActual = new Date(fechaInicioObj);
-            // Función para formatear fecha como YYYY-MM-DD
-            const formatearFecha = (fecha) => {
-                const año = fecha.getFullYear();
-                const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-                const dia = fecha.getDate().toString().padStart(2, '0');
-                return `${año}-${mes}-${dia}`;
-            };
-            // Función para determinar si una fecha es el último día del mes
-            const esUltimoDiaDelMes = (fecha) => {
-                const ultimoDia = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
-                if (inicio === fin) {
-                    return true;
-                }
-                return fecha.getDate() === ultimoDia;
-            };
-            // Ajustar fechaActual al último día del mes si no lo es
-            if (!esUltimoDiaDelMes(fechaActual)) {
-                // Avanzar al último día del mes actual
-                fechaActual.setDate(new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0).getDate());
-            }
-            // Iterar por los últimos días de cada mes en el rango
-            while (fechaActual <= fechaFinObj) {
-                // Siempre establecer la fecha al último día del mes actual
-                //const ultimoDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
-                // Agregar la fecha si está dentro del rango
-                if (fechaActual <= fechaFinObj) {
-                    fechasStr.push(formatearFecha(fechaActual));
-                    fechasDate.push(new Date(fechaActual));
-                }
-                // Avanzar al siguiente mes
-                fechaActual.setMonth(fechaActual.getMonth() + 1);
-                fechaActual.setDate(1); // Establecer al primer día del mes para evitar problemas con meses de diferentes longitudes
-            }
             const codigosCuentasNecesarias = extraerCodigosCuentasDeIndicadores(indicadores);
             if (codigosCuentasNecesarias.length > 0) {
-                saldos = await saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(oficina, fechasDate, codigosCuentasNecesarias);
+                saldos = await saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(oficina, fechaInicioObj, fechaFinObj, codigosCuentasNecesarias, fechaFinObj === fechaInicioObj);
             }
             else {
-                saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechasDate);
+                saldos = await saldosRepository.obtenerSaldosPorOficinaYFecha(oficina, fechaInicioObj, fechaFinObj, true);
             }
         }
         catch (error) {

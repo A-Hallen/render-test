@@ -123,5 +123,51 @@ class KPIContablesRepository {
             };
         }
     }
+    /**
+     * Compara los KPIs entre dos oficinas para una fecha específica
+     * @param oficina1 Código de la primera oficina
+     * @param oficina2 Código de la segunda oficina
+     * @param fecha Fecha en formato YYYY-MM-DD
+     * @returns Objeto con la comparación de KPIs entre las dos oficinas
+     */
+    async compararKPIsEntreOficinas(oficina1, oficina2, fecha) {
+        try {
+            console.log(`[KPIContablesRepository] Comparando KPIs entre oficinas: ${oficina1} y ${oficina2}, fecha: ${fecha}`);
+            // Obtener todos los indicadores configurados
+            const indicadores = await this.indicadoresRepository.obtenerTodos();
+            console.log(`[KPIContablesRepository] Se encontraron ${indicadores.length} indicadores configurados`);
+            // Obtener los KPIs para la primera oficina
+            const resultadoOficina1 = await (0, devolverKPIsPorOficinaRangoFechas_1.devolverKPIsPorOficinaRangoFechas)(indicadores, oficina1, fecha, fecha);
+            // Obtener los KPIs para la segunda oficina
+            const resultadoOficina2 = await (0, devolverKPIsPorOficinaRangoFechas_1.devolverKPIsPorOficinaRangoFechas)(indicadores, oficina2, fecha, fecha);
+            // Extraer los colores de los indicadores para facilitar la visualización
+            const indicadoresColor = indicadores.map((i) => {
+                return { id: i.id, nombre: i.nombre, color: i.color };
+            });
+            console.log(`[KPIContablesRepository] Comparación de KPIs completada`);
+            return {
+                indicadores: indicadoresColor,
+                kpisOficina1: resultadoOficina1.kpisCalculados,
+                kpisOficina2: resultadoOficina2.kpisCalculados,
+                fecha: fecha,
+                nombreOficina1: oficina1,
+                nombreOficina2: oficina2,
+                mensaje: 'Comparación de KPIs completada correctamente'
+            };
+        }
+        catch (error) {
+            console.error(`[KPIContablesRepository] Error al comparar KPIs: ${error.message}`);
+            // En caso de error, devolver una estructura vacía pero válida
+            return {
+                indicadores: [],
+                kpisOficina1: {},
+                kpisOficina2: {},
+                fecha: fecha,
+                nombreOficina1: oficina1,
+                nombreOficina2: oficina2,
+                mensaje: `Error al comparar KPIs: ${error.message}`
+            };
+        }
+    }
 }
 exports.KPIContablesRepository = KPIContablesRepository;

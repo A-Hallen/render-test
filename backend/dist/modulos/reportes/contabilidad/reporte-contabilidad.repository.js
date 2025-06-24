@@ -64,7 +64,9 @@ class ReporteContabilidadRepository {
                     }
                     // Obtener saldos para todas las fechas en el rango
                     if (fechas.length > 0) {
-                        saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(reporteData.oficina, fechas, cuentas);
+                        // Usar el modo diario si el tipo de reporte es diario
+                        const modoDiario = reporteData.tipoReporte === 'diario';
+                        saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(reporteData.oficina, fechaInicio, fechaFin, cuentas, modoDiario);
                     }
                     // Usar las fechas de inicio y fin para el reporte
                     fechaReporte = reporteData.fechaFin;
@@ -72,7 +74,9 @@ class ReporteContabilidadRepository {
                 else if (reporteData.fecha) {
                     // Reporte por fecha específica (mantener compatibilidad)
                     const fecha = new Date(Date.parse(reporteData.fecha + 'T00:00:00'));
-                    saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(reporteData.oficina, [fecha], cuentas);
+                    // Para fecha específica, usamos la misma fecha como inicio y fin
+                    saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(reporteData.oficina, fecha, fecha, cuentas, true // Usar modo diario para fecha específica
+                    );
                     fechaReporte = reporteData.fecha;
                     descripcionPeriodo = `Reporte del ${reporteData.fecha}`;
                 }

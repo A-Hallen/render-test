@@ -75,7 +75,7 @@ const searchablePages: SearchablePageItem[] = [
   },
   {
     id: 'page-indicadores-contables',
-    title: 'Indicadores Contables',
+    title: 'Indicadores financieros',
     description: 'Métricas y análisis contables',
     route: '/indicadores-contables',
     keywords: ['indicadores', 'contables', 'metricas', 'analisis']

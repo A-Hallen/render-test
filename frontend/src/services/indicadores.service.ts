@@ -1,5 +1,5 @@
 /**
- * Servicio para gestionar los indicadores contables
+ * Servicio para gestionar los indicadores financieros
  * Utiliza el cliente HTTP centralizado para manejar automáticamente
  * tokens y errores de autenticación
  */
@@ -7,11 +7,11 @@
 import { httpClient } from './httpClient';
 
 /**
- * Obtiene los indicadores contables para un rango de fechas
+ * Obtiene los indicadores financieros para un rango de fechas
  * @param codigoOficina Código de la oficina
  * @param fechaInicio Fecha de inicio en formato YYYY-MM-DD
  * @param fechaFin Fecha de fin en formato YYYY-MM-DD
- * @returns Datos de los indicadores contables
+ * @returns Datos de los indicadores financieros
  */
 export async function obtenerIndicadoresPorRango(
   codigoOficina: string,
@@ -25,20 +25,20 @@ export async function obtenerIndicadoresPorRango(
       { oficina: codigoOficina, fechaInicio, fechaFin }
     );
   } catch (error) {
-    console.error('Error al obtener indicadores contables por rango:', error);
+    console.error('Error al obtener indicadores financieros por rango:', error);
     throw error;
   }
 }
 
 /**
- * Obtiene todos los indicadores contables configurados
- * @returns Lista de indicadores contables
+ * Obtiene todos los indicadores financieros configurados
+ * @returns Lista de indicadores financieros
  */
 export async function obtenerIndicadoresContables() {
   try {
     return await httpClient.get('/api/indicadores-contables');
   } catch (error) {
-    console.error('Error al obtener indicadores contables:', error);
+    console.error('Error al obtener indicadores financieros:', error);
     throw error;
   }
 }
@@ -82,6 +82,30 @@ export async function eliminarIndicadorContable(id: string) {
     return await httpClient.delete(`/api/indicadores-contables/${id}`);
   } catch (error) {
     console.error('Error al eliminar indicador contable:', error);
+    throw error;
+  }
+}
+
+/**
+ * Compara los indicadores financieros entre dos oficinas para una fecha específica
+ * @param oficina1 Código de la primera oficina
+ * @param oficina2 Código de la segunda oficina
+ * @param fecha Fecha en formato YYYY-MM-DD
+ * @returns Datos de la comparación de indicadores entre las dos oficinas
+ */
+export async function compararIndicadoresEntreOficinas(
+  oficina1: string,
+  oficina2: string,
+  fecha: string
+) {
+  try {
+    return await httpClient.get(
+      `/api/kpi-contables/comparar-oficinas`, 
+      {}, 
+      { oficina1, oficina2, fecha }
+    );
+  } catch (error) {
+    console.error('Error al comparar indicadores entre oficinas:', error);
     throw error;
   }
 }

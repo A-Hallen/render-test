@@ -22,90 +22,139 @@ import {
   Lock,
   Calculator,
   AlertTriangle,
-  ChevronDown,
-  ChevronUp
+  ChevronUp,
+  PieChart,
+  LineChart,
+  Wallet,
+  BookOpen,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/auth';
 import { useData } from '../../context/DataContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export interface SidebarProps {
   collapsed: boolean;
   toggleSidebar: () => void;
-  // Add optional prop for mobile view handling
   isMobile?: boolean;
   setCollapsed?: (state: boolean) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMobile = false, setCollapsed }) => {
-  // Usar user y acceder a profileVersion para forzar re-renderizado cuando cambia la imagen
   const { user } = useAuth();
-  // Acceder a profileVersion para asegurar que el componente se re-renderice
   useAuth().profileVersion;
-  // Obtener datos de la cooperativa para mostrar el logo
   const { cooperativa } = useData();
-  // Estado para controlar la expansión del menú de configuración
-  const [configExpanded, setConfigExpanded] = useState(false);
-  // Obtener la ruta actual para resaltar el elemento activo
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    analytics: true,
+    operations: false,
+    management: false,
+    config: false
+  });
   const location = useLocation();
-  // Referencia al contenedor del submenú para hacer scroll
-  const configButtonRef = useRef<HTMLButtonElement>(null);
-  
-  // Efecto para hacer scroll cuando se expande el menú de configuración
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Efecto para manejar el estado inicial de los grupos expandidos
   useEffect(() => {
-    if (configExpanded && configButtonRef.current) {
-      // Pequeño timeout para asegurar que la animación comience antes del scroll
-      setTimeout(() => {
-        configButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+    const path = location.pathname;
+    const newState = {...expandedGroups};
+    
+    // Expandir el grupo relevante según la ruta actual
+    if (path.startsWith('/settings')) {
+      newState.config = true;
+    } else if (path.startsWith('/indicadores') || path === '/analysis') {
+      newState.analytics = true;
+    } else if (path === '/loans' || path === '/deposits' || path === '/members') {
+      newState.operations = true;
     }
-  }, [configExpanded]);
-  
-  // Definir los elementos de configuración
-  const configItems = [
-    ...(user?.role === UserRole.ADMIN ? [{ name: 'General', icon: <Globe size={18} />, path: '/settings/general' }] : []),
-    { name: 'Indicadores', icon: <Calculator size={18} />, path: '/settings/indicadores' },
-    { name: 'Usuario', icon: <User size={18} />, path: '/settings/user' },
-    { name: 'Seguridad', icon: <Lock size={18} />, path: '/settings/security' },
-    { name: 'Fuentes de Datos', icon: <Database size={18} />, path: '/settings/dataSource' },
-    { name: 'Notificaciones', icon: <Bell size={18} />, path: '/settings/notifications' },
-    { name: 'Umbrales', icon: <AlertTriangle size={18} />, path: '/settings/thresholds' },
+    
+    setExpandedGroups(newState);
+  }, []);
+
+  const toggleGroup = (group: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [group]: !prev[group]
+    }));
+  };
+
+  // Definición de grupos de navegación
+  const navGroups = [
+    {
+      id: 'dashboard',
+      name: 'Dashboard',
+      icon: <LayoutDashboard size={18} />,
+      path: '/',
+      items: []
+    },
+    {
+      id: 'analytics',
+      name: 'Análisis',
+      icon: <LineChart size={18} />,
+      items: [
+        { name: 'Indicadores Financieros', icon: <BarChart2 size={16} />, path: '/indicadores-contables' },
+        { name: 'Comparación', icon: <TrendingUp size={16} />, path: '/indicadores-comparacion' },
+        { name: 'Informes', icon: <FileText size={16} />, path: '/reports' },
+        { name: 'Análisis Avanzado', icon: <PieChart size={16} />, path: '/analysis' },
+        { name: 'Visualización 3D', icon: <Box size={16} />, path: '/visualizacion-3d' }
+      ]
+    },
+    {
+      id: 'operations',
+      name: 'Operaciones',
+      icon: <Wallet size={18} />,
+      items: [
+        { name: 'Préstamos', icon: <CreditCard size={16} />, path: '/loans' },
+        { name: 'Depósitos', icon: <Banknote size={16} />, path: '/deposits' },
+        { name: 'Miembros', icon: <Users size={16} />, path: '/members' },
+        { name: 'Contabilidad', icon: <BookOpen size={16} />, path: '/accounting' }
+      ]
+    },
+    {
+      id: 'management',
+      name: 'Gestión',
+      icon: <Shield size={18} />,
+      items: [
+        { name: 'Calendario', icon: <Calendar size={16} />, path: '/calendar' },
+        { name: 'AI Asistente', icon: <MessageSquare size={16} />, path: '/ai-chat' },
+        ...(user?.role === UserRole.ADMIN ? [
+          { name: 'Sincronización', icon: <Database size={16} />, path: '/sincronizacion' },
+          { name: 'Prueba Notificaciones', icon: <Bell size={16} />, path: '/notifications-test' }
+        ] : [])
+      ]
+    },
+    {
+      id: 'config',
+      name: 'Configuración',
+      icon: <Settings size={18} />,
+      items: [
+        ...(user?.role === UserRole.ADMIN ? [{ name: 'General', icon: <Globe size={16} />, path: '/settings/general' }] : []),
+        { name: 'Indicadores', icon: <Calculator size={16} />, path: '/settings/indicadores' },
+        { name: 'Usuario', icon: <User size={16} />, path: '/settings/user' },
+        { name: 'Seguridad', icon: <Lock size={16} />, path: '/settings/security' },
+        { name: 'Fuentes de Datos', icon: <Database size={16} />, path: '/settings/dataSource' },
+        { name: 'Notificaciones', icon: <Bell size={16} />, path: '/settings/notifications' },
+        { name: 'Umbrales', icon: <AlertTriangle size={16} />, path: '/settings/thresholds' },
+      ]
+    }
   ];
 
-  // Verificar si alguna ruta de configuración está activa
-  const isConfigActive = location.pathname.startsWith('/settings');
-
-  const navItems = [
-    { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
-    { name: 'Indicadores Contables', icon: <BarChart2 size={20} />, path: '/indicadores-contables' },
-    { name: 'Informes', icon: <FileText size={20} />, path: '/reports' },
-    { name: 'Análisis', icon: <TrendingUp size={20} />, path: '/analysis' },
-    { name: 'Préstamos', icon: <CreditCard size={20} />, path: '/loans' },
-    { name: 'Miembros', icon: <Users size={20} />, path: '/members' },
-    { name: 'Depósitos', icon: <Banknote size={20} />, path: '/deposits' },
-    { name: 'Visualización 3D', icon: <Box size={20} />, path: '/visualizacion-3d' },
-    { name: 'AI Asistente', icon: <MessageSquare size={20} />, path: '/ai-chat' },
-    { name: 'Calendario', icon: <Calendar size={20} />, path: '/calendar' },
-    // Mostrar enlace de sincronización solo para administradores
-    ...(user?.role === UserRole.ADMIN ? [{ name: 'Sincronización', icon: <Database size={20} />, path: '/sincronizacion' }] : []),
-    // Añadir enlace a la página de prueba de notificaciones
-    ...(user?.role === UserRole.ADMIN ? [{ name: 'Prueba Notificaciones', icon: <Bell size={20} />, path: '/notifications-test' }] : []),
-  ];
-  
   return (
     <aside 
-      className={`bg-blue-900 text-white transition-all duration-300 ease-in-out ${
+      ref={sidebarRef}
+      className={`bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-all duration-300 ease-in-out ${
         collapsed ? 'w-16' : 'w-64'
-      } h-screen flex flex-col`}
+      } h-screen flex flex-col shadow-xl`}
     >
-      <div className="flex items-center p-4 border-b border-blue-800">
+      {/* Header del Sidebar */}
+      <div className="flex items-center p-4 border-b border-blue-700">
         {!collapsed ? (
           cooperativa?.logo ? (
             <div className="flex-1 flex items-center">
               <img 
                 src={cooperativa.logo} 
                 alt={cooperativa.nombre || 'Logo de la cooperativa'} 
-                className="h-8 max-w-[180px] object-contain"
+                className="h-8 max-w-[180px] object-contain transition-opacity hover:opacity-80"
               />
             </div>
           ) : (
@@ -117,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
               <img 
                 src={cooperativa.logo} 
                 alt="Logo" 
-                className="h-8 w-8 object-contain"
+                className="h-8 w-8 object-contain transition-opacity hover:opacity-80"
               />
             </div>
           ) : (
@@ -127,114 +176,129 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
           )
         )}
         <button 
-          className="ml-auto text-blue-200 hover:text-white"
+          className="ml-auto text-blue-200 hover:text-white transition-colors"
           onClick={toggleSidebar}
+          aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
         >
-          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          {collapsed ? (
+            <ChevronRight size={20} className="hover:scale-110 transition-transform" />
+          ) : (
+            <ChevronLeft size={20} className="hover:scale-110 transition-transform" />
+          )}
         </button>
       </div>
       
-      <div className="flex-1 overflow-y-auto py-4">
+      {/* Contenido del Sidebar */}
+      <div className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-blue-700 scrollbar-track-blue-900">
         <nav className="px-2 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              onClick={() => {
-                // Close sidebar on mobile when a link is clicked
-                if (isMobile && setCollapsed) {
-                  setCollapsed(true);
-                }
-              }}
-              className={({ isActive }) => `
-                flex items-center py-2 px-3 rounded-md transition duration-150 ease-in-out
-                ${isActive 
-                  ? 'bg-blue-800 text-white' 
-                  : 'text-blue-100 hover:bg-blue-800 hover:text-white'}
-                ${collapsed ? 'justify-center' : ''}
-              `}
-            >
-              <span>{item.icon}</span>
-              {!collapsed && <span className="ml-3">{item.name}</span>}
-            </NavLink>
-          ))}
-          
-          {/* Configuración con submenú */}
-          <div className="relative">
-            <button
-              ref={configButtonRef}
-              className={`w-full flex items-center py-2 px-3 rounded-md transition duration-150 ease-in-out
-                ${isConfigActive
-                  ? 'bg-blue-800 text-white' 
-                  : 'text-blue-100 hover:bg-blue-800 hover:text-white'}
-                ${collapsed ? 'justify-center' : 'justify-between'}
-              `}
-              onClick={() => {
-                if (!collapsed) {
-                  setConfigExpanded(!configExpanded);
-                } else if (isMobile && setCollapsed) {
-                  // Si está colapsado, expandir el sidebar primero
-                  setCollapsed(false);
-                }
-              }}
-            >
-              <div className="flex items-center">
-                <span><Settings size={20} /></span>
-                {!collapsed && <span className="ml-3">Configuración</span>}
-              </div>
-              {!collapsed && (
-                <span>
-                  {configExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </span>
+          {navGroups.map((group) => (
+            <div key={group.id} className="mb-1">
+              {collapsed ? (
+                <NavLink
+                  to={group.path || (group.items.length > 0 ? group.items[0].path : '/')}
+                  className={({ isActive }) => `
+                    flex items-center justify-center py-3 px-2 rounded-md transition-all
+                    ${isActive ? 'bg-blue-700/50 text-white' : 'text-blue-100 hover:bg-blue-800/50 hover:text-white'}
+                    hover:scale-105
+                  `}
+                  title={group.name}
+                >
+                  {group.icon}
+                </NavLink>
+              ) : (
+                <>
+                  {group.path ? (
+                    <NavLink
+                      to={group.path}
+                      className={({ isActive }) => `
+                        w-full flex items-center py-2 px-3 rounded-md transition-all
+                        ${isActive 
+                          ? 'bg-blue-800/70 text-white' 
+                          : 'text-blue-100 hover:bg-blue-800/50 hover:text-white'}
+                      `}
+                      onClick={() => isMobile && setCollapsed && setCollapsed(true)}
+                    >
+                      <div className="flex items-center">
+                        <span>{group.icon}</span>
+                        <span className="ml-3">{group.name}</span>
+                      </div>
+                    </NavLink>
+                  ) : (
+                    <button
+                      className={`w-full flex items-center justify-between py-2 px-3 rounded-md transition-all
+                        ${location.pathname.startsWith(`/${group.id}`) || group.items.some(item => location.pathname === item.path) 
+                          ? 'bg-blue-800/70 text-white' 
+                          : 'text-blue-100 hover:bg-blue-800/50 hover:text-white'}
+                      `}
+                      onClick={() => toggleGroup(group.id)}
+                    >
+                      <div className="flex items-center">
+                        <span>{group.icon}</span>
+                        <span className="ml-3">{group.name}</span>
+                      </div>
+                      <motion.span
+                        animate={{ rotate: expandedGroups[group.id] ? 0 : 180 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronUp size={16} />
+                      </motion.span>
+                    </button>
+                  )}
+
+                  <AnimatePresence>
+                    {expandedGroups[group.id] && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-1 ml-6 space-y-1">
+                          {group.items.map((item) => (
+                            <NavLink
+                              key={item.name}
+                              to={item.path}
+                              onClick={() => isMobile && setCollapsed && setCollapsed(true)}
+                              className={({ isActive }) => `
+                                flex items-center py-1.5 px-3 rounded-md transition-all text-sm
+                                ${isActive 
+                                  ? 'bg-blue-700 text-white font-medium' 
+                                  : 'text-blue-100 hover:bg-blue-700/50 hover:text-white'}
+                                hover:translate-x-1
+                              `}
+                            >
+                              <span>{item.icon}</span>
+                              <span className="ml-2">{item.name}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               )}
-            </button>
-            
-            {/* Submenú de configuración con animación */}
-            <div 
-              className={`overflow-hidden transition-all duration-300 ease-in-out ${!collapsed ? 'max-h-96' : 'max-h-0'} ${configExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
-            >
-              {!collapsed && (
-              <div className="mt-1 ml-6 space-y-1">
-                {configItems.map((item) => (
-                  <NavLink
-                    key={item.name}
-                    to={item.path}
-                    onClick={() => {
-                      // Close sidebar on mobile when a link is clicked
-                      if (isMobile && setCollapsed) {
-                        setCollapsed(true);
-                      }
-                    }}
-                    className={({ isActive }) => `
-                      flex items-center py-1.5 px-3 rounded-md transition duration-150 ease-in-out text-sm
-                      ${isActive 
-                        ? 'bg-blue-700 text-white' 
-                        : 'text-blue-100 hover:bg-blue-700 hover:text-white'}
-                    `}
-                  >
-                    <span>{item.icon}</span>
-                    <span className="ml-2">{item.name}</span>
-                  </NavLink>
-                ))}
-              </div>
-            )}
             </div>
-          </div>
+          ))}
         </nav>
       </div>
       
-      <div className="p-3 border-t border-blue-800 mt-auto">
+      {/* Footer del Sidebar */}
+      <div className="p-3 border-t border-blue-700 mt-auto">
         <div className={`flex ${collapsed ? 'justify-center' : 'justify-center'} items-center`}>
           {collapsed ? (
             <div className="text-blue-300 text-xs font-light italic">A</div>
           ) : (
-            <div className="text-blue-300 text-xs font-light flex items-center">
+            <motion.div 
+              className="text-blue-300 text-xs font-light flex items-center"
+              whileHover={{ scale: 1.05 }}
+            >
               <span className="mr-1">powered by</span>
               <span className="font-semibold text-white">Angia</span>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
     </aside>
   );
-};  
+};

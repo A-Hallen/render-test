@@ -8,5 +8,6 @@ const kpiContablesController = new KPIContablesController();
 router.get('/promedio', kpiContablesController.obtenerPromedioKPIsOficina.bind(kpiContablesController));
 router.get('/rango-fechas', kpiContablesController.obtenerKPIsPorOficinaRangosFecha.bind(kpiContablesController));
 router.get('/indicador', kpiContablesController.obtenerKPIEspecifico.bind(kpiContablesController));
+router.get('/comparar-oficinas', kpiContablesController.compararKPIsEntreOficinas.bind(kpiContablesController));
 
 export default router;

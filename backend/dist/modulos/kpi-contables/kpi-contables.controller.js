@@ -7,6 +7,60 @@ class KPIContablesController {
         this.kpiContablesService = new kpi_contables_service_1.KPIContablesService();
     }
     /**
+     * Compara los KPIs entre dos oficinas para una fecha específica
+     * @param req Request con parámetros de consulta (oficina1, oficina2, fecha)
+     * @param res Response para enviar la comparación de KPIs
+     */
+    async compararKPIsEntreOficinas(req, res) {
+        try {
+            const oficina1 = req.query["oficina1"];
+            const oficina2 = req.query["oficina2"];
+            const fecha = req.query["fecha"];
+            // Validar parámetros requeridos
+            if (!oficina1 || !oficina2 || !fecha) {
+                res.status(400).json({
+                    mensaje: 'Los parámetros oficina1, oficina2 y fecha son obligatorios'
+                });
+                return;
+            }
+            // Intentar obtener la comparación de KPIs
+            try {
+                const comparacion = await this.kpiContablesService.compararKPIsEntreOficinas(oficina1, oficina2, fecha);
+                // Si no hay KPIs, devolver un objeto vacío pero con la estructura correcta
+                if (!comparacion || !comparacion.indicadores || comparacion.indicadores.length === 0) {
+                    res.status(200).json({
+                        indicadores: [],
+                        kpisOficina1: {},
+                        kpisOficina2: {},
+                        fecha: fecha,
+                        nombreOficina1: oficina1,
+                        nombreOficina2: oficina2,
+                        mensaje: 'No hay KPIs disponibles para los filtros seleccionados'
+                    });
+                    return;
+                }
+                res.status(200).json(comparacion);
+                return;
+            }
+            catch (error) {
+                console.error("[Controller] Error al comparar KPIs entre oficinas:", error);
+                res.status(500).json({
+                    mensaje: 'Error al comparar KPIs entre oficinas',
+                    error: error.message
+                });
+                return;
+            }
+        }
+        catch (error) {
+            console.error("[Controller] Error al comparar KPIs entre oficinas:", error);
+            res.status(500).json({
+                mensaje: 'Error al comparar KPIs entre oficinas',
+                error: error.message
+            });
+            return;
+        }
+    }
+    /**
      * Obtiene los KPIs promediados por periodo para una oficina
      * @param req Request con parámetros de consulta (oficina, fechaInicio, fechaFin)
      * @param res Response para enviar los KPIs
@@ -35,7 +89,6 @@ class KPIContablesController {
             const oficina = req.query["oficina"] || 'MATRIZ';
             let fechaInicio = req.query["fechaInicio"];
             let fechaFin = req.query["fechaFin"];
-            console.log(`[Controller] Obteniendo KPIs para oficina: ${oficina}, desde: ${fechaInicio}, hasta: ${fechaFin}`);
             // Validar parámetros requeridos
             if (!fechaInicio || !fechaFin) {
                 res.status(400).json({
@@ -93,7 +146,6 @@ class KPIContablesController {
                 });
                 return;
             }
-            console.log(`[Controller] Obteniendo KPI específico para oficina: ${oficina}, indicador: ${idIndicador}, fecha: ${fecha}`);
             const kpi = await this.kpiContablesService.obtenerKPIEspecifico(oficina, idIndicador, fecha);
             if (!kpi) {
                 res.status(404).json({

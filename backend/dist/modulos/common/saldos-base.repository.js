@@ -2,12 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SaldosBaseRepository = void 0;
 const saldos_repository_1 = require("../saldosContables/saldos.repository");
+const fechas_saldos_service_1 = require("./fechas-saldos.service");
 /**
  * Clase base abstracta para repositorios que consultan saldos contables
+ * Versión optimizada con las nuevas consultas de Firestore
  */
 class SaldosBaseRepository {
     constructor() {
         this.saldosRepository = new saldos_repository_1.SaldosRepository();
+        this.fechasSaldosService = new fechas_saldos_service_1.FechasSaldosService();
     }
     /**
      * Obtiene los saldos para las cuentas especificadas en los últimos meses disponibles
@@ -18,108 +21,104 @@ class SaldosBaseRepository {
      */
     async obtenerSaldosContables(codigoOficina, codigosCuenta, nombreRepositorio) {
         try {
-            console.log(`[${nombreRepositorio}] Obteniendo datos para cuentas: ${codigosCuenta.join(', ')}`);
-            // Estrategia: Buscar datos de forma incremental, en lotes de 2 meses
-            // hasta encontrar al menos 2 meses con datos
-            const fechaActual = new Date();
-            let mesesConDatos = 0;
-            let mesInicial = 0;
-            const TAMANO_LOTE = 2; // Consultar de 2 en 2 meses
-            const fechaUltima = "2025-06-16"; //TODO: Cambiar por la fecha actual
-            let saldos = [];
-            // Buscar datos incrementalmente hasta tener al menos 2 meses con datos
-            // Generar fechas para este lote
-            const fechasLote = [];
-            for (let i = 0; i < TAMANO_LOTE; i++) {
-                const mes = mesInicial + i;
-                var fecha = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - mes, 0);
-                if (mes === 1) {
-                    // Parsear la fecha manualmente para evitar problemas con zona horaria
-                    const [year, month, day] = fechaUltima.split('-').map(Number);
-                    fecha = new Date(year, month - 1, day); // Los meses en JS son 0-indexed
-                }
-                fechasLote.push(fecha);
-            }
-            console.log(`[${nombreRepositorio}]: Consultando fechas: ${fechasLote.map(f => f.toISOString().split('T')[0]).join(', ')}`);
-            // Obtener los saldos para este lote de fechas
-            const saldosLote = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(codigoOficina, fechasLote, codigosCuenta);
-            // Agregar los saldos encontrados al conjunto total
-            saldos = [...saldos, ...saldosLote];
-            // Actualizar el contador de meses con datos
-            if (saldosLote.length > 0) {
-                // Contar cuántos meses distintos tienen datos
-                const fechasUnicas = new Set(saldosLote.map(s => {
-                    const fechaStr = typeof s.fecha === 'string' ? s.fecha : s.fecha.toISOString().split('T')[0];
-                    return fechaStr;
-                }));
-                mesesConDatos += fechasUnicas.size;
-                console.log(`[${nombreRepositorio}] Encontrados datos para ${fechasUnicas.size} mes(es) en este lote. Total: ${mesesConDatos}`);
-            }
-            // Avanzar al siguiente lote de meses
-            mesInicial += TAMANO_LOTE;
-            console.log(`[${nombreRepositorio}] Total de saldos obtenidos: ${saldos.length}`);
-            if (saldos.length === 0) {
-                console.log(`[${nombreRepositorio}] No se encontraron saldos`);
+            console.log(`[${nombreRepositorio}] Obteniendo saldos contables para oficina ${codigoOficina}`);
+            // Paso 1: Obtener la última y penúltima fecha con datos disponibles
+            const fechasConDatos = await this.fechasSaldosService.ObtenerUltimaYPenultimaFechaConDatos(codigoOficina, codigosCuenta, nombreRepositorio);
+            if (!fechasConDatos || fechasConDatos.length === 0) {
+                console.log(`[${nombreRepositorio}] No se encontraron fechas con datos para la oficina ${codigoOficina}`);
                 return null;
             }
-            // Agrupar saldos por fecha
+            // Obtener la fecha más reciente con datos (fecha actual para el reporte)
+            const fechaActualStr = fechasConDatos[0].fecha;
+            const fechaActualDate = new Date(fechaActualStr);
+            // Paso 2: Calcular la fecha del último día del mes anterior (fechaAnterior)
+            // Primer día del mes actual
+            const primerDiaMesActual = new Date(fechaActualDate.getFullYear(), fechaActualDate.getMonth(), 1);
+            // Último día del mes anterior (día 0 del mes actual)
+            const ultimoDiaMesAnterior = new Date(primerDiaMesActual);
+            ultimoDiaMesAnterior.setDate(0);
+            const fechaAnteriorStr = ultimoDiaMesAnterior.toISOString().split('T')[0];
+            // Paso 3: Obtener la fecha del día anterior con datos (fechaDiaAnterior)
+            // Si tenemos al menos dos fechas con datos, la segunda es la penúltima fecha con datos
+            let fechaDiaAnteriorStr = '';
+            if (fechasConDatos.length > 1) {
+                fechaDiaAnteriorStr = fechasConDatos[1].fecha;
+            }
+            else {
+                // Si solo tenemos una fecha, intentamos encontrar la anterior
+                const fechaAnteriorDate = new Date(fechaActualDate);
+                fechaAnteriorDate.setDate(fechaActualDate.getDate() - 1);
+                fechaDiaAnteriorStr = fechaAnteriorDate.toISOString().split('T')[0];
+            }
+            // Paso 4: Obtener los saldos para las tres fechas en una sola consulta
+            // Rango de fechas desde la más antigua hasta la más reciente
+            const fechaInicio = new Date(Math.min(new Date(fechaAnteriorStr).getTime(), new Date(fechaDiaAnteriorStr).getTime()));
+            const fechaFin = new Date(fechaActualStr);
+            console.log(`[${nombreRepositorio}] Consultando saldos desde ${fechaInicio.toISOString()} hasta ${fechaFin.toISOString()}`);
+            // Usar modo diario para obtener todas las fechas específicas
+            const saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(codigoOficina, fechaFin, fechaInicio, codigosCuenta);
+            if (!saldos || saldos.length === 0) {
+                console.log(`[${nombreRepositorio}] No se encontraron saldos para la oficina ${codigoOficina}`);
+                return null;
+            }
+            // Paso 5: Agrupar saldos por fecha
             const saldosPorFecha = {};
-            saldos.forEach(saldo => {
-                const fechaStr = typeof saldo.fecha === 'string' ? saldo.fecha : saldo.fecha.toISOString().split('T')[0];
+            saldos.forEach((saldo) => {
+                // Preferir fechaTimestamp si está disponible
+                let fechaStr;
+                if (saldo.fechaTimestamp) {
+                    fechaStr = saldo.fechaTimestamp.toDate().toISOString().split('T')[0];
+                }
+                else {
+                    fechaStr = typeof saldo.fecha === 'string' ? saldo.fecha : saldo.fecha.toISOString().split('T')[0];
+                }
                 if (!saldosPorFecha[fechaStr]) {
                     saldosPorFecha[fechaStr] = 0;
                 }
                 saldosPorFecha[fechaStr] += saldo.saldo;
             });
-            // Ordenar fechas de más reciente a más antigua
-            const fechasOrdenadas = Object.keys(saldosPorFecha).sort((a, b) => {
-                return new Date(b).getTime() - new Date(a).getTime();
-            });
-            if (fechasOrdenadas.length < 2) {
-                console.log(`[${nombreRepositorio}] No hay suficientes meses con datos para calcular variación (${fechasOrdenadas.length} encontrados)`);
-                // Si solo hay un mes, devolver los datos sin comparación
-                if (fechasOrdenadas.length === 1) {
-                    const fechaActualStr = fechasOrdenadas[0];
-                    return {
-                        fecha: fechaActualStr,
-                        monto: saldosPorFecha[fechaActualStr]
-                    };
-                }
-                return null;
-            }
-            // Obtener los dos meses más recientes
-            const fechaActualStr = fechasOrdenadas[0];
-            const fechaAnteriorStr = fechasOrdenadas[1];
-            // Calcular la variación
-            const montoActual = saldosPorFecha[fechaActualStr];
-            const montoAnterior = saldosPorFecha[fechaAnteriorStr];
+            // Paso 6: Obtener los montos para cada fecha
+            const montoActual = saldosPorFecha[fechaActualStr] || 0;
+            const montoAnterior = saldosPorFecha[fechaAnteriorStr] || 0;
+            const montoDiaAnterior = saldosPorFecha[fechaDiaAnteriorStr] || 0;
+            // Paso 7: Calcular variaciones
             const variacion = montoActual - montoAnterior;
-            const variacionPorcentaje = (variacion / montoAnterior) * 100;
-            // Formatear nombres de meses para la descripción
-            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-            const fechaActualObj = new Date(fechaActualStr);
-            const fechaAnteriorObj = new Date(fechaAnteriorStr);
-            const mesActual = meses[fechaActualObj.getMonth()];
-            const mesAnterior = meses[fechaAnteriorObj.getMonth()];
-            const anioActual = fechaActualObj.getFullYear();
-            const anioAnterior = fechaAnteriorObj.getFullYear();
-            // Crear descripción de la comparación
+            let variacionPorcentaje = 0;
+            if (montoAnterior !== 0) {
+                variacionPorcentaje = (variacion / Math.abs(montoAnterior)) * 100;
+            }
+            else if (variacion !== 0) {
+                variacionPorcentaje = variacion > 0 ? 100 : -100;
+            }
+            const variacionDiaria = montoActual - montoDiaAnterior;
+            let variacionPorcentajeDiaria = 0;
+            if (montoDiaAnterior !== 0) {
+                variacionPorcentajeDiaria = (variacionDiaria / Math.abs(montoDiaAnterior)) * 100;
+            }
+            else if (variacionDiaria !== 0) {
+                variacionPorcentajeDiaria = variacionDiaria > 0 ? 100 : -100;
+            }
+            // Paso 8: Generar descripción de la comparación
+            const mesActual = new Date(fechaActualStr).toLocaleDateString('es-ES', { month: 'long' });
+            const mesAnterior = new Date(fechaAnteriorStr).toLocaleDateString('es-ES', { month: 'long' });
             const descripcionComparacion = `${mesActual} vs ${mesAnterior} ${anioAnterior !== anioActual ? anioAnterior : ''}`;
-            console.log(`[${nombreRepositorio}] Datos procesados: ${fechaActualStr} (${montoActual}) vs ${fechaAnteriorStr} (${montoAnterior})`);
-            console.log(`[${nombreRepositorio}] Variación: ${variacion} (${variacionPorcentaje.toFixed(2)}%)`);
             return {
                 fecha: fechaActualStr,
                 monto: montoActual,
                 fechaAnterior: fechaAnteriorStr,
-                montoAnterior,
-                variacion,
-                variacionPorcentaje,
-                descripcionComparacion
+                montoAnterior: montoAnterior,
+                variacion: variacion,
+                variacionPorcentaje: parseFloat(variacionPorcentaje.toFixed(2)),
+                descripcionComparacion: descripcionComparacion,
+                fechaDiaAnterior: fechaDiaAnteriorStr,
+                montoDiaAnterior: montoDiaAnterior,
+                variacionDiaria: variacionDiaria,
+                variacionPorcentajeDiaria: parseFloat(variacionPorcentajeDiaria.toFixed(2))
             };
         }
         catch (error) {
-            console.error(`[${nombreRepositorio}] Error al obtener saldos:`, error);
-            throw error;
+            console.error(`[${nombreRepositorio}] Error al obtener saldos contables:`, error);
+            return null;
         }
     }
 }

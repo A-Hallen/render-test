@@ -25,15 +25,15 @@ class CuentasContablesRepository extends base_firebaseRepository_1.BaseFirebaseR
      */
     async obtenerCuentas() {
         try {
-            const query = this.collection.where('estaActiva', '==', true);
-            const snapshot = await query.get();
-            return snapshot.docs.map(doc => {
+            const snapshot = await this.collection.get();
+            const res = snapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
-                    CODIGO: data.codigo,
-                    NOMBRE: data.nombre
+                    CODIGO: data.CODIGO,
+                    NOMBRE: data.NOMBRE
                 };
             });
+            return res;
         }
         catch (error) {
             console.error('Error al obtener cuentas contables:', error);
@@ -48,9 +48,7 @@ class CuentasContablesRepository extends base_firebaseRepository_1.BaseFirebaseR
         try {
             // Firebase no permite consultas IN con más de 10 valores
             // Si hay más de 10 códigos, dividimos en múltiples consultas
-            const resultados = [];
-            const queryFondos = await this.collection.where('CODIGO', '==', '11').get();
-            const fondosData = queryFondos.docs[0].data();
+            const resultadosConDuplicados = [];
             // Procesar en lotes de 10
             for (let i = 0; i < codigos.length; i += 10) {
                 const lote = codigos.slice(i, i + 10);
@@ -61,9 +59,18 @@ class CuentasContablesRepository extends base_firebaseRepository_1.BaseFirebaseR
                     const data = doc.data();
                     return data;
                 });
-                resultados.push(...cuentasLote);
+                resultadosConDuplicados.push(...cuentasLote);
             }
-            return resultados;
+            // Eliminar duplicados usando un Map para mantener solo una cuenta por código
+            const cuentasPorCodigo = new Map();
+            for (const cuenta of resultadosConDuplicados) {
+                if (!cuentasPorCodigo.has(cuenta.CODIGO.toString())) {
+                    cuentasPorCodigo.set(cuenta.CODIGO.toString(), cuenta);
+                }
+            }
+            // Convertir el Map de vuelta a un array
+            const resultadosSinDuplicados = Array.from(cuentasPorCodigo.values());
+            return resultadosSinDuplicados;
         }
         catch (error) {
             console.error('Error al obtener cuentas por códigos:', error);

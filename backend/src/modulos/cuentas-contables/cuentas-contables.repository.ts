@@ -52,12 +52,8 @@ export class CuentasContablesRepository extends BaseFirebaseRepository<CuentaDat
     try {
       // Firebase no permite consultas IN con más de 10 valores
       // Si hay más de 10 códigos, dividimos en múltiples consultas
-      const resultados: CuentaData[] = [];
+      const resultadosConDuplicados: CuentaData[] = [];
 
-      const queryFondos = await this.collection.where('CODIGO', '==', '11').get();
-
-      const fondosData = queryFondos.docs[0].data();
-      
       // Procesar en lotes de 10
       for (let i = 0; i < codigos.length; i += 10) {
         const lote = codigos.slice(i, i + 10);
@@ -70,10 +66,22 @@ export class CuentasContablesRepository extends BaseFirebaseRepository<CuentaDat
           return data as CuentaData;
         });
         
-        resultados.push(...cuentasLote);
+        resultadosConDuplicados.push(...cuentasLote);
       }
       
-      return resultados;
+      // Eliminar duplicados usando un Map para mantener solo una cuenta por código
+      const cuentasPorCodigo = new Map<string, CuentaData>();
+      
+      for (const cuenta of resultadosConDuplicados) {
+        if (!cuentasPorCodigo.has(cuenta.CODIGO.toString())) {
+          cuentasPorCodigo.set(cuenta.CODIGO.toString(), cuenta);
+        }
+      }
+      
+      // Convertir el Map de vuelta a un array
+      const resultadosSinDuplicados = Array.from(cuentasPorCodigo.values());
+      
+      return resultadosSinDuplicados;
     } catch (error) {
       console.error('Error al obtener cuentas por códigos:', error);
       throw error;

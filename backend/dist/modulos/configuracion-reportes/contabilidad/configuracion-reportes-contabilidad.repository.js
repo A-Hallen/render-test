@@ -52,7 +52,11 @@ class ConfiguracionReportesContabilidadRepository extends base_firebaseRepositor
                 };
             }
             // Obtener los saldos para todas las fechas
-            const saldos = await this.saldosRepository.obtenerSaldosPorOficinaYFecha(reporteData.oficina, fechas.map((fecha) => new Date(Date.parse(fecha + "T00:00:00"))));
+            const fechaInicio = new Date(Date.parse(reporteData.fechaInicio + "T00:00:00"));
+            const fechaFin = new Date(Date.parse(reporteData.fechaFin + "T00:00:00"));
+            // Usar el modo diario si el periodo es diario
+            const modoDiario = periodoNormalizado === "diario";
+            const saldos = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(reporteData.oficina, fechaInicio, fechaFin, configuracion.categorias.flatMap((categoria) => categoria.cuentas), modoDiario);
             if (!saldos || saldos.length === 0)
                 return {
                     success: false,

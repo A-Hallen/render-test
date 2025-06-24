@@ -1,14 +1,18 @@
 import { SaldosContables } from '../saldosContables/saldos.model';
 import { SaldosRepository } from '../saldosContables/saldos.repository';
+import { FechasSaldosService } from './fechas-saldos.service';
 
 /**
  * Clase base abstracta para repositorios que consultan saldos contables
+ * Versión optimizada con las nuevas consultas de Firestore
  */
 export abstract class SaldosBaseRepository {
   protected saldosRepository: SaldosRepository;
+  protected fechasSaldosService: FechasSaldosService;
 
   constructor() {
     this.saldosRepository = new SaldosRepository();
+    this.fechasSaldosService = new FechasSaldosService();
   }
 
   /**
@@ -30,136 +34,111 @@ export abstract class SaldosBaseRepository {
     variacion?: number;
     variacionPorcentaje?: number;
     descripcionComparacion?: string;
+    // Comparación con día anterior
+    fechaDiaAnterior?: string;
+    montoDiaAnterior?: number;
+    variacionDiaria?: number;
+    variacionPorcentajeDiaria?: number;
   } | null> {
     try {
-      console.log(`[${nombreRepositorio}] Obteniendo datos para cuentas: ${codigosCuenta.join(', ')}`);
+      console.log(`[${nombreRepositorio}] Obteniendo saldos contables para oficina ${codigoOficina}`);
       
-      // Estrategia: Buscar datos de forma incremental, en lotes de 2 meses
-      // hasta encontrar al menos 2 meses con datos
-      const fechaActual = new Date();
-      let mesesConDatos = 0;
-      let mesInicial = 0;
-      const TAMANO_LOTE = 2; // Consultar de 2 en 2 meses
-
-      const fechaUltima = "2025-06-16"; //TODO: Cambiar por la fecha actual
+      // Obtener los saldos de las fechas clave (actual, penúltimo y mes anterior)
+      const saldosFechas = await this.fechasSaldosService.ObtenerUltimaYPenultimaFechaConDatos(
+        codigoOficina, 
+        codigosCuenta, 
+        nombreRepositorio
+      );
       
-      let saldos: SaldosContables[] = [];
-      
-      // Buscar datos incrementalmente hasta tener al menos 2 meses con datos
-        // Generar fechas para este lote
-        const fechasLote: Date[] = [];
-        for (let i = 0; i < TAMANO_LOTE; i++) {
-          const mes = mesInicial + i;
-          var fecha = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - mes, 0);
-          if(mes === 1){
-            // Parsear la fecha manualmente para evitar problemas con zona horaria
-            const [year, month, day] = fechaUltima.split('-').map(Number);
-            fecha = new Date(year, month - 1, day); // Los meses en JS son 0-indexed
-          }
-          fechasLote.push(fecha);
-        }
-        
-        console.log(`[${nombreRepositorio}]: Consultando fechas: ${fechasLote.map(f => f.toISOString().split('T')[0]).join(', ')}`);
-        
-        // Obtener los saldos para este lote de fechas
-        const saldosLote = await this.saldosRepository.obtenerSaldosPorOficinaFechaYCuentas(
-          codigoOficina,
-          fechasLote,
-          codigosCuenta
-        );
-        
-        // Agregar los saldos encontrados al conjunto total
-        saldos = [...saldos, ...saldosLote];
-        
-        // Actualizar el contador de meses con datos
-        if (saldosLote.length > 0) {
-          // Contar cuántos meses distintos tienen datos
-          const fechasUnicas = new Set(saldosLote.map(s => {
-            const fechaStr = typeof s.fecha === 'string' ? s.fecha : (s.fecha as Date).toISOString().split('T')[0];
-            return fechaStr;
-          }));
-          mesesConDatos += fechasUnicas.size;
-          console.log(`[${nombreRepositorio}] Encontrados datos para ${fechasUnicas.size} mes(es) en este lote. Total: ${mesesConDatos}`);
-        }
-        
-        // Avanzar al siguiente lote de meses
-        mesInicial += TAMANO_LOTE;
-      
-      console.log(`[${nombreRepositorio}] Total de saldos obtenidos: ${saldos.length}`);
-      
-      if (saldos.length === 0) {
-        console.log(`[${nombreRepositorio}] No se encontraron saldos`);
+      // Verificar si tenemos el saldo actual
+      if (!saldosFechas.saldoActual) {
+        console.log(`[${nombreRepositorio}] No se encontró saldo actual para la oficina ${codigoOficina}`);
         return null;
       }
       
-      // Agrupar saldos por fecha
-      const saldosPorFecha: { [fecha: string]: number } = {};
-      saldos.forEach(saldo => {
-        const fechaStr = typeof saldo.fecha === 'string' ? saldo.fecha : (saldo.fecha as Date).toISOString().split('T')[0];
-        if (!saldosPorFecha[fechaStr]) {
-          saldosPorFecha[fechaStr] = 0;
-        }
-        saldosPorFecha[fechaStr] += saldo.saldo;
-      });
+      // Extraer los datos del saldo actual
+      const saldoActual = saldosFechas.saldoActual;
+      const fechaActual = saldoActual.fechaTimestamp?.toDate().toISOString().split('T')[0] || '';
+      const montoActual = saldoActual.saldo || 0;
       
-      // Ordenar fechas de más reciente a más antigua
-      const fechasOrdenadas = Object.keys(saldosPorFecha).sort((a, b) => {
-        return new Date(b).getTime() - new Date(a).getTime();
-      });
-      
-      if (fechasOrdenadas.length < 2) {
-        console.log(`[${nombreRepositorio}] No hay suficientes meses con datos para calcular variación (${fechasOrdenadas.length} encontrados)`);
-        
-        // Si solo hay un mes, devolver los datos sin comparación
-        if (fechasOrdenadas.length === 1) {
-          const fechaActualStr = fechasOrdenadas[0];
-          return {
-            fecha: fechaActualStr,
-            monto: saldosPorFecha[fechaActualStr]
-          };
-        }
-        
-        return null;
-      }
-      
-      // Obtener los dos meses más recientes
-      const fechaActualStr = fechasOrdenadas[0];
-      const fechaAnteriorStr = fechasOrdenadas[1];
-      
-      // Calcular la variación
-      const montoActual = saldosPorFecha[fechaActualStr];
-      const montoAnterior = saldosPorFecha[fechaAnteriorStr];
-      const variacion = montoActual - montoAnterior;
-      const variacionPorcentaje = (variacion / montoAnterior) * 100;
-      
-      // Formatear nombres de meses para la descripción
-      const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-      const fechaActualObj = new Date(fechaActualStr);
-      const fechaAnteriorObj = new Date(fechaAnteriorStr);
-      
-      const mesActual = meses[fechaActualObj.getMonth()];
-      const mesAnterior = meses[fechaAnteriorObj.getMonth()];
-      const anioActual = fechaActualObj.getFullYear();
-      const anioAnterior = fechaAnteriorObj.getFullYear();
-      
-      // Crear descripción de la comparación
-      const descripcionComparacion = `${mesActual} vs ${mesAnterior} ${anioAnterior !== anioActual ? anioAnterior : ''}`;
-      
-      console.log(`[${nombreRepositorio}] Datos procesados: ${fechaActualStr} (${montoActual}) vs ${fechaAnteriorStr} (${montoAnterior})`);
-      console.log(`[${nombreRepositorio}] Variación: ${variacion} (${variacionPorcentaje.toFixed(2)}%)`);
-      
-      return {
-        fecha: fechaActualStr,
-        monto: montoActual,
-        fechaAnterior: fechaAnteriorStr,
-        montoAnterior,
-        variacion,
-        variacionPorcentaje,
-        descripcionComparacion
+      // Preparar el objeto de resultado
+      const resultado: {
+        fecha: string;
+        monto: number;
+        fechaAnterior?: string;
+        montoAnterior?: number;
+        variacion?: number;
+        variacionPorcentaje?: number;
+        descripcionComparacion?: string;
+        fechaDiaAnterior?: string;
+        montoDiaAnterior?: number;
+        variacionDiaria?: number;
+        variacionPorcentajeDiaria?: number;
+      } = {
+        fecha: fechaActual,
+        monto: montoActual
       };
+      
+      // Agregar datos de comparación con el mes anterior si están disponibles
+      if (saldosFechas.saldoMesAnterior) {
+        const saldoMesAnterior = saldosFechas.saldoMesAnterior;
+        const fechaMesAnterior = saldoMesAnterior.fechaTimestamp?.toDate().toISOString().split('T')[0] || '';
+        const montoMesAnterior = saldoMesAnterior.saldo || 0;
+        
+        resultado.fechaAnterior = fechaMesAnterior;
+        resultado.montoAnterior = montoMesAnterior;
+        resultado.variacion = montoActual - montoMesAnterior;
+        
+        // Calcular la variación porcentual solo si el monto anterior no es cero
+        if (montoMesAnterior !== 0) {
+          resultado.variacionPorcentaje = (resultado.variacion / Math.abs(montoMesAnterior)) * 100;
+        } else if (resultado.variacion !== 0) {
+          // Si el monto anterior es cero, la variación porcentual es indefinida
+          resultado.variacionPorcentaje = resultado.variacion > 0 ? 100 : -100;
+        } else {
+          resultado.variacionPorcentaje = 0;
+        }
+        
+        // Descripción de la comparación
+        const mesActual = new Date(fechaActual).toLocaleDateString('es-ES', { month: 'long' });
+        const mesAnteriorStr = new Date(fechaMesAnterior).toLocaleDateString('es-ES', { month: 'long' });
+        resultado.descripcionComparacion = `${mesActual} vs ${mesAnteriorStr}`;
+      }
+      
+      // Agregar datos de comparación con el día anterior si están disponibles
+      if (saldosFechas.saldoPenultimo) {
+        const saldoPenultimo = saldosFechas.saldoPenultimo;
+        const fechaPenultima = saldoPenultimo.fechaTimestamp?.toDate().toISOString().split('T')[0] || '';
+        const montoPenultimo = saldoPenultimo.saldo || 0;
+        
+        resultado.fechaDiaAnterior = fechaPenultima;
+        resultado.montoDiaAnterior = montoPenultimo;
+        resultado.variacionDiaria = montoActual - montoPenultimo;
+        
+        // Calcular la variación porcentual diaria solo si el monto del día anterior no es cero
+        if (montoPenultimo !== 0) {
+          resultado.variacionPorcentajeDiaria = (resultado.variacionDiaria / Math.abs(montoPenultimo)) * 100;
+        } else if (resultado.variacionDiaria !== 0) {
+          // Si el monto del día anterior es cero, la variación porcentual es indefinida
+          resultado.variacionPorcentajeDiaria = resultado.variacionDiaria > 0 ? 100 : -100;
+        } else {
+          resultado.variacionPorcentajeDiaria = 0;
+        }
+      }
+      
+      // Formatear los valores porcentuales para mostrar solo 2 decimales
+      if (resultado.variacionPorcentaje !== undefined) {
+        resultado.variacionPorcentaje = parseFloat(resultado.variacionPorcentaje.toFixed(2));
+      }
+      
+      if (resultado.variacionPorcentajeDiaria !== undefined) {
+        resultado.variacionPorcentajeDiaria = parseFloat(resultado.variacionPorcentajeDiaria.toFixed(2));
+      }
+      
+      return resultado;
     } catch (error) {
-      console.error(`[${nombreRepositorio}] Error al obtener saldos:`, error);
-      throw error;
+      console.error(`[${nombreRepositorio}] Error al obtener saldos contables:`, error);
+      return null;
     }
   }
 }
