@@ -1,92 +1,131 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Alert, Spinner, Badge } from '../components/ui';
-import { RefreshCw, Database, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Alert, Button, Card, Spinner } from '../components/ui';
+import { ExportacionContableCard } from '../components/sincronizacion/ExportacionContable';
+import { SincronizacionProgramadaCard } from '../components/sincronizacion/SincronizacionProgramada';
+import { 
+  obtenerEstadoSincronizacion, 
+  obtenerEstadoExportacionContable, 
+  iniciarSincronizacion,
+  EstadoSincronizacion as IEstadoSincronizacion, 
+  EstadoExportacionContable 
+} from '../services/sincronizacion.service';
+import { RefreshCw, Database, Clock } from 'lucide-react';
 import { UserRole } from '../types/auth';
-import { EstadoSincronizacion, obtenerEstadoSincronizacion, iniciarSincronizacion as iniciarSincronizacionService } from '../services/sincronizacion.service';
+import { ProgresoExportacionCard } from '../components/sincronizacion/ProgresoExportacion';
 
 export const Sincronizacion: React.FC = () => {
-  const [estado, setEstado] = useState<EstadoSincronizacion | null>(null);
+  const { user } = useAuth();
+  const [estadoSincronizacion, setEstadoSincronizacion] = useState<IEstadoSincronizacion | null>(null);
+  const [estadoExportacion, setEstadoExportacion] = useState<EstadoExportacionContable | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportacionActiva, setExportacionActiva] = useState<boolean>(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
-  const [tipoMensaje, setTipoMensaje] = useState<'success' | 'error'>('success');
-  const { user } = useAuth();
+  const [tipoMensaje, setTipoMensaje] = useState<'success' | 'error' | 'warning' | 'info'>('info');
 
   // Verificar si el usuario tiene permisos de administrador
   const esAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.GERENTE_GENERAL;
 
-  // Cargar el estado inicial de sincronización
-  useEffect(() => {
-    cargarEstado();
-    // Actualizar el estado cada 30 segundos
-    const intervalo = setInterval(cargarEstado, 30000);
-    return () => clearInterval(intervalo);
-  }, []);
-
-  // Función para cargar el estado de sincronización
-  const cargarEstado = async () => {
+  // Función para actualizar el estado de sincronización
+  const actualizarEstadoSincronizacion = async () => {
     try {
-      setCargando(true);
-      setError(null);
-      
       const data = await obtenerEstadoSincronizacion();
-      setEstado(data);
+      setEstadoSincronizacion(data);
     } catch (err: any) {
-      console.error('Error al cargar estado de sincronización:', err);
-      setError(err.message || 'Error al cargar estado de sincronización');
-    } finally {
-      setCargando(false);
+      console.error('Error al obtener estado de sincronización:', err);
+      setError('Error al obtener estado de sincronización');
+    }
+  };
+
+  // Función para actualizar el estado de exportación
+  const actualizarEstadoExportacion = async () => {
+    try {
+      const data = await obtenerEstadoExportacionContable();
+      if (data && data.estado) {
+        setEstadoExportacion(data.estado);
+        setExportacionActiva(data.estado.enProceso || false);
+      }
+    } catch (err: any) {
+      console.error('Error al obtener estado de exportación:', err);
+      // No mostramos error para no sobrecargar la interfaz
     }
   };
 
   // Función para iniciar sincronización manual
-  const iniciarSincronizacion = async (completa: boolean) => {
+  const iniciarSincronizacionManual = async (completa: boolean) => {
+    setMensaje(null);
+    setCargando(true);
     try {
-      setCargando(true);
-      setError(null);
-      setMensaje(null);
-      
-      const data = await iniciarSincronizacionService(completa);
-      
-      if (!data.exito) {
-        throw new Error(data.mensaje || 'Error al iniciar sincronización');
+      const respuesta = await iniciarSincronizacion(completa);
+      if (respuesta.exito) {
+        setMensaje(respuesta.mensaje);
+        setTipoMensaje('success');
+        // Actualizar el estado después de iniciar la sincronización
+        await actualizarEstadoSincronizacion();
+      } else {
+        setMensaje('Error al iniciar la sincronización');
+        setTipoMensaje('error');
       }
-      
-      setMensaje(data.mensaje);
-      setTipoMensaje('success');
-      
-      // Actualizar el estado después de iniciar la sincronización
-      await cargarEstado();
-    } catch (err: any) {
-      console.error('Error al iniciar sincronización:', err);
-      setError(err.message || 'Error al iniciar sincronización');
-      setMensaje(err.message || 'Error al iniciar sincronización');
+    } catch (error: any) {
+      console.error('Error al iniciar sincronización:', error);
+      setMensaje('Error al iniciar la sincronización: ' + (error.message || 'Error desconocido'));
       setTipoMensaje('error');
     } finally {
       setCargando(false);
     }
   };
 
-  // Formatear fecha
-  const formatearFecha = (fechaStr: string) => {
-    if (!fechaStr) return 'Nunca';
-    
-    try {
-      const fecha = new Date(fechaStr);
-      return fecha.toLocaleString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    } catch (err) {
-      return fechaStr;
-    }
+  // Efecto para cargar el estado inicial
+  useEffect(() => {
+    const cargarDatos = async () => {
+      setCargando(true);
+      try {
+        await Promise.all([
+          actualizarEstadoSincronizacion(),
+          actualizarEstadoExportacion()
+        ]);
+      } catch (err) {
+        console.error('Error al cargar datos iniciales:', err);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
+
+  // Efecto para actualizar periódicamente el estado
+  useEffect(() => {
+    // Intervalo para actualizar el estado de sincronización (cada 30 segundos)
+    const intervaloSincronizacion = setInterval(() => {
+      actualizarEstadoSincronizacion();
+    }, 30000);
+
+    // Intervalo para actualizar el estado de exportación (cada 5 segundos si hay una exportación activa, sino cada 15 segundos)
+    const intervaloExportacion = setInterval(() => {
+      actualizarEstadoExportacion();
+    }, exportacionActiva ? 5000 : 15000);
+
+    return () => {
+      clearInterval(intervaloSincronizacion);
+      clearInterval(intervaloExportacion);
+    };
+  }, [exportacionActiva]);
+
+  // Manejador para cuando se inicia una exportación
+  const handleExportacionIniciada = () => {
+    setExportacionActiva(true);
+    // Actualizamos inmediatamente para mostrar el progreso
+    actualizarEstadoExportacion();
   };
 
+  // Manejador para actualizar después de configurar la sincronización programada
+  const handleConfiguracionActualizada = () => {
+    actualizarEstadoSincronizacion();
+  };
+
+  // Redirigir si el usuario no tiene permisos
   if (!esAdmin) {
     return (
       <div className="p-6">
@@ -100,136 +139,110 @@ export const Sincronizacion: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Administración de Sincronización</h1>
-        <Button 
-          onClick={cargarEstado} 
-          variant="outline" 
-          disabled={cargando}
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Actualizar
-        </Button>
-      </div>
-
-      {mensaje && (
-        <Alert type={tipoMensaje === 'success' ? 'success' : 'error'} onClose={() => setMensaje(null)}>
-          {mensaje}
-        </Alert>
-      )}
-
+      <h1 className="text-2xl font-bold mb-6">Panel de Sincronización</h1>
+      
       {error && (
-        <Alert type="error" onClose={() => setError(null)}>
+        <Alert type="error" className="mb-4">
           {error}
         </Alert>
       )}
 
+      {mensaje && (
+        <Alert type={tipoMensaje} className="mb-4" onClose={() => setMensaje(null)}>
+          {mensaje}
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <Database className="mr-2 h-5 w-5" />
-              Estado de Sincronización
-            </h2>
-            
-            {cargando && !estado ? (
-              <div className="flex justify-center items-center h-40">
-                <Spinner size="lg" />
-              </div>
-            ) : estado ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Estado actual:</span>
-                  {estado.enProceso ? (
-                    <Badge color="blue" className="flex items-center">
-                      <Spinner size="sm" className="mr-1" />
-                      En proceso
-                    </Badge>
-                  ) : (
-                    <Badge color="green" className="flex items-center">
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                      Inactivo
-                    </Badge>
-                  )}
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Última sincronización:</span>
-                  <span className="font-medium">{formatearFecha(estado.ultimaSincronizacion)}</span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Sincronización programada:</span>
-                  {estado.programada ? (
-                    <Badge color="green" className="flex items-center">
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                      Activada
-                    </Badge>
-                  ) : (
-                    <Badge color="red" className="flex items-center">
-                      <XCircle className="mr-1 h-3 w-3" />
-                      Desactivada
-                    </Badge>
-                  )}
-                </div>
-                
-                {estado.programada && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Expresión cron:</span>
-                    <code className="bg-gray-100 px-2 py-1 rounded text-sm">{estado.expresionCron}</code>
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center">
+            <Database className="mr-2 h-5 w-5" />
+            Estado de Sincronización
+          </h2>
+          {cargando && !estadoSincronizacion ? (
+            <div className="flex justify-center items-center h-40">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Estado:</span>
+                {estadoSincronizacion?.enProceso ? (
+                  <div className="flex items-center">
+                    <Spinner size="sm" className="mr-2" />
+                    <span className="text-blue-600 font-medium">Sincronización en progreso</span>
                   </div>
+                ) : (
+                  <span className="text-green-600 font-medium">Listo para sincronizar</span>
                 )}
               </div>
-            ) : (
-              <Alert type="error">
-                No se pudo cargar el estado de sincronización
-              </Alert>
-            )}
-          </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Última sincronización:</span>
+                <span>{estadoSincronizacion?.ultimaSincronizacion || 'Nunca'}</span>
+              </div>
+            </div>
+          )}
         </Card>
 
-        <Card>
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <Clock className="mr-2 h-5 w-5" />
-              Sincronización Manual
-            </h2>
-            
-            <div className="space-y-4">
-              <p className="text-gray-600">
-                Inicia manualmente la sincronización entre el core financiero y Firebase.
-              </p>
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center">
+            <RefreshCw className="mr-2 h-5 w-5" />
+            Sincronización Manual
+          </h2>
+          <div className="space-y-4">
+            <p className="text-gray-600">Inicie una sincronización manual de datos desde AWS a Firebase.</p>
+            <div className="flex flex-col space-y-3">
+              <Button 
+                onClick={() => iniciarSincronizacionManual(false)} 
+                disabled={cargando || (estadoSincronizacion?.enProceso || false)}
+                className="w-full"
+              >
+                {cargando ? <Spinner size="sm" className="mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Sincronización Incremental
+              </Button>
               
-              <div className="flex flex-col space-y-3">
-                <Button 
-                  onClick={() => iniciarSincronizacion(false)} 
-                  disabled={cargando || (estado?.enProceso || false)}
-                  className="w-full"
-                >
-                  {cargando ? <Spinner size="sm" className="mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                  Sincronización Incremental
-                </Button>
-                
-                <Button 
-                  onClick={() => iniciarSincronizacion(true)} 
-                  variant="outline" 
-                  disabled={cargando || (estado?.enProceso || false)}
-                  className="w-full"
-                >
-                  {cargando ? <Spinner size="sm" className="mr-2" /> : <Database className="mr-2 h-4 w-4" />}
-                  Sincronización Completa
-                </Button>
-              </div>
-              
-              <Alert type="warning">
-                <p className="text-sm">
-                  <strong>Nota:</strong> La sincronización completa puede tardar varios minutos dependiendo del volumen de datos.
-                </p>
-              </Alert>
+              <Button 
+                onClick={() => iniciarSincronizacionManual(true)} 
+                variant="outline" 
+                disabled={cargando || (estadoSincronizacion?.enProceso || false)}
+                className="w-full"
+              >
+                Sincronización Completa
+              </Button>
             </div>
           </div>
         </Card>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <ExportacionContableCard 
+          enProceso={estadoExportacion?.enProceso || false}
+          porcentajeCompletado={estadoExportacion?.progreso?.porcentajeCompletado || 0}
+          onExportacionIniciada={handleExportacionIniciada}
+          onMensaje={(mensaje, tipo) => {
+            setMensaje(mensaje);
+            setTipoMensaje(tipo);
+          }}
+        />
+        <ProgresoExportacionCard 
+          estado={estadoExportacion} 
+          cargando={cargando && !estadoExportacion} 
+        />
+      </div>
+
+      <div className="mt-6">
+        <SincronizacionProgramadaCard 
+          expresionCron={estadoSincronizacion?.expresionCron || ''}
+          programada={estadoSincronizacion?.programada || false}
+          onConfiguracionActualizada={handleConfiguracionActualizada}
+          onMensaje={(mensaje, tipo) => {
+            setMensaje(mensaje);
+            setTipoMensaje(tipo);
+          }}
+        />
+      </div>
     </div>
   );
 };
+
+export default Sincronizacion;

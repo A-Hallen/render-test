@@ -4,6 +4,7 @@
 
 import express from 'express';
 import { sincronizacionService } from '../../database/SincronizacionService';
+import { iniciarExportacionContable, obtenerEstadoExportacion } from './contabilidad-export.controller';
 
 // Crear el router
 const router = express.Router();
@@ -65,5 +66,9 @@ function obtenerEstadoSincronizacion(req: express.Request, res: express.Response
 // Definir las rutas usando aserción de tipo para evitar errores de TypeScript
 (router as any).post('/iniciar', iniciarSincronizacion);
 (router as any).get('/estado', obtenerEstadoSincronizacion);
+
+// Rutas para exportación de contabilidad
+(router as any).post('/contabilidad/exportar', iniciarExportacionContable);
+(router as any).get('/contabilidad/estado', obtenerEstadoExportacion);
 
 export default router;
