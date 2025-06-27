@@ -8,3 +8,6 @@ export * from './reportes.types';
 export * from './cartera-credito.types';
 export * from './captaciones.types';
 export * from './cooperativa.types';
+export * from './sync.types';
+export * from './user-settings.types';
+export * from './dashboard.types';

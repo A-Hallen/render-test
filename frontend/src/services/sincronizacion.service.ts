@@ -4,15 +4,8 @@
  * tokens y errores de autenticación
  */
 
+import { RespuestaEstadoSincronizacion, RespuestaHistorialSincronizacion } from 'shared';
 import { httpClient } from './httpClient';
-
-// Interfaz para el estado de sincronización
-export interface EstadoSincronizacion {
-  enProceso: boolean;
-  ultimaSincronizacion: string;
-  programada: boolean;
-  expresionCron: string;
-}
 
 // Interfaz para el progreso de exportación
 export interface ProgresoExportacion {
@@ -40,51 +33,6 @@ export interface RespuestaSincronizacion {
 }
 
 /**
- * Obtiene el estado actual de la sincronización
- * @returns Estado de la sincronización
- */
-export async function obtenerEstadoSincronizacion(): Promise<EstadoSincronizacion> {
-  try {
-    return await httpClient.get('/api/sincronizacion/estado');
-  } catch (error) {
-    console.error('Error al obtener estado de sincronización:', error);
-    throw new Error('Error al obtener estado de sincronización');
-  }
-}
-
-/**
- * Inicia una sincronización manual
- * @param completa Si es true, realiza una sincronización completa
- * @returns Respuesta de la operación
- */
-export async function iniciarSincronizacion(completa: boolean): Promise<RespuestaSincronizacion> {
-  try {
-    return await httpClient.post('/api/sincronizacion/iniciar', { forzarCompleta: completa });
-  } catch (error) {
-    console.error('Error al iniciar sincronización:', error);
-    throw new Error('Error al iniciar sincronización');
-  }
-}
-
-/**
- * Configura la sincronización programada
- * @param expresionCron Expresión cron para la programación
- * @param activa Si es true, activa la sincronización programada
- * @returns Respuesta de la operación
- */
-export async function configurarSincronizacionProgramada(
-  expresionCron: string,
-  activa: boolean
-): Promise<RespuestaSincronizacion> {
-  try {
-    return await httpClient.post('/api/sincronizacion/programar', { expresionCron, activa });
-  } catch (error) {
-    console.error('Error al configurar sincronización programada:', error);
-    throw new Error('Error al configurar sincronización programada');
-  }
-}
-
-/**
  * Inicia la exportación de datos contables a Firebase
  * @param fechaInicio Fecha de inicio en formato YYYY-MM-DD
  * @param fechaFin Fecha de fin en formato YYYY-MM-DD
@@ -109,14 +57,67 @@ export async function exportarDatosContables(
 }
 
 /**
- * Obtiene el estado actual de la exportación de datos contables
- * @returns Estado de la exportación
+ * Obtiene el estado actual de la sincronización
+ * @returns Estado de la sincronización
  */
-export async function obtenerEstadoExportacionContable(): Promise<{ exito: boolean; estado: EstadoExportacionContable }> {
+export async function obtenerEstadoSincronizacion(): Promise<RespuestaEstadoSincronizacion> {
   try {
-    return await httpClient.get('/api/sincronizacion/contabilidad/estado');
+    const estado = await httpClient.get('/api/sincronizacion/contabilidad/estado');
+    return estado;
   } catch (error) {
-    console.error('Error al obtener estado de exportación contable:', error);
-    throw new Error('Error al obtener estado de exportación contable');
+    console.error('Error al obtener estado de sincronización:', error);
+    throw new Error('Error al obtener estado de sincronización');
+  }
+}
+
+/**
+ * Obtiene el historial de sincronizaciones
+ * @returns Lista de registros de sincronización
+ */
+export async function obtenerHistorialSincronizacion(): Promise<RespuestaHistorialSincronizacion> {
+  try {
+    return await httpClient.get('/api/sincronizacion/contabilidad/historial');
+  } catch (error) {
+    console.error('Error al obtener historial de sincronización:', error);
+    throw new Error('Error al obtener historial de sincronización');
+  }
+}
+
+/**
+ * Inicia el proceso de sincronización
+ * @returns Respuesta de la operación
+ */
+export async function iniciarSincronizacion(): Promise<RespuestaSincronizacion> {
+  try {
+    return await httpClient.post('/api/sincronizacion/contabilidad/iniciar', {});
+  } catch (error) {
+    console.error('Error al iniciar sincronización:', error);
+    throw new Error('Error al iniciar sincronización');
+  }
+}
+
+/**
+ * Pausa el proceso de sincronización
+ * @returns Respuesta de la operación
+ */
+export async function pausarSincronizacion(): Promise<RespuestaSincronizacion> {
+  try {
+    return await httpClient.post('/api/sincronizacion/contabilidad/pausar', {});
+  } catch (error) {
+    console.error('Error al pausar sincronización:', error);
+    throw new Error('Error al pausar sincronización');
+  }
+}
+
+/**
+ * Detiene el proceso de sincronización
+ * @returns Respuesta de la operación
+ */
+export async function detenerSincronizacion(): Promise<RespuestaSincronizacion> {
+  try {
+    return await httpClient.post('/api/sincronizacion/contabilidad/detener', {});
+  } catch (error) {
+    console.error('Error al detener sincronización:', error);
+    throw new Error('Error al detener sincronización');
   }
 }

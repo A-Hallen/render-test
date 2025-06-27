@@ -44,6 +44,18 @@ export class CuentasContablesRepository extends BaseFirebaseRepository<CuentaDat
     }
   }
 
+  async obtenerCuentasPorNombre(nombre: string): Promise<CuentaData[]> {
+    try {
+      const nombreLower = nombre.toLowerCase();
+  
+      const cuentas = await this.obtenerCuentas();
+      return cuentas.filter(c => c.NOMBRE.toLowerCase().includes(nombreLower));
+    } catch (error) {
+      console.error('Error al obtener cuentas por nombre:', error);
+      throw error;
+    }
+  }
+
   /**
    * Obtiene cuentas contables específicas por sus códigos
    * @param codigos Array de códigos de cuenta a buscar

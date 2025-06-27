@@ -28,6 +28,14 @@ export class CuentasContablesService {
   }
 
   /**
+   * Obtiene cuentas contables específicas por sus nombres
+   * @param nombres Array de nombres de cuenta a buscar
+   */
+  async obtenerCuentasPorNombre(nombre: string): Promise<CuentaData[]> {
+    return this.repository.obtenerCuentasPorNombre(nombre);
+  }
+
+  /**
    * Crea una nueva cuenta contable
    * @param cuenta Datos de la cuenta a crear
    */

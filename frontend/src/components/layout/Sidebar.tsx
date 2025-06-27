@@ -130,6 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMo
       items: [
         ...(user?.role === UserRole.ADMIN ? [{ name: 'General', icon: <Globe size={16} />, path: '/settings/general' }] : []),
         { name: 'Indicadores', icon: <Calculator size={16} />, path: '/settings/indicadores' },
+        { name: 'Dashboard', icon: <LayoutDashboard size={16} />, path: '/settings/dashboard' },
         { name: 'Usuario', icon: <User size={16} />, path: '/settings/user' },
         { name: 'Seguridad', icon: <Lock size={16} />, path: '/settings/security' },
         { name: 'Fuentes de Datos', icon: <Database size={16} />, path: '/settings/dataSource' },

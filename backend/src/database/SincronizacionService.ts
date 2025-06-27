@@ -77,35 +77,6 @@ export class SincronizacionService {
   }
   
   /**
-   * Inicia la sincronización programada
-   * @param cronExpression Expresión cron para la programación (por defecto cada 15 minutos)
-   */
-  iniciarSincronizacionProgramada(cronExpression: string = '*/15 * * * *'): void {
-    console.log(`Sincronización programada iniciada con expresión: ${cronExpression}`);
-    
-    // Programar sincronización usando node-cron
-    schedule(cronExpression, async () => {
-      try {
-        if (this.isSyncing) {
-          console.warn('Ya hay una sincronización en curso, omitiendo...');
-          return;
-        }
-        
-        console.log('Iniciando sincronización programada...');
-        await this.sincronizarDatos();
-        console.log('Sincronización programada completada');
-      } catch (error) {
-        console.error('Error en sincronización programada:', error);
-      }
-    });
-    
-    // Ejecutar una sincronización inicial
-    this.sincronizarDatos().catch(error => {
-      console.error('Error en sincronización inicial:', error);
-    });
-  }
-  
-  /**
    * Sincroniza datos entre MySQL y Firebase
    * @param forzarCompleta Si es true, sincroniza todos los datos ignorando lastSyncTime
    */

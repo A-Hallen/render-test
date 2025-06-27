@@ -67,6 +67,7 @@ class HttpClient {
         try {
           return await response.json();
         } catch (e) {
+          console.log("error al parsear la respuesta", e);
           return await response.text();
         }
       } else if (response.status === 401) {

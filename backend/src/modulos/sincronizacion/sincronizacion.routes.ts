@@ -2,73 +2,53 @@
  * Rutas para la sincronización de datos entre MySQL y Firebase
  */
 
-import express from 'express';
-import { sincronizacionService } from '../../database/SincronizacionService';
-import { iniciarExportacionContable, obtenerEstadoExportacion } from './contabilidad-export.controller';
+import express from "express";
+import { SincronizacionController } from "./sincronizacion.controller";
+import { AuthMiddleware } from "../auth";
+
+const sincronizacionController = new SincronizacionController();
 
 // Crear el router
 const router = express.Router();
 
-// Manejador para POST /iniciar
-async function iniciarSincronizacion(req: express.Request, res: express.Response) {
-  try {
-    const forzarCompleta = req.body.forzarCompleta === true;
-    
-    // Verificar si ya hay una sincronización en curso
-    if (sincronizacionService.estaEnProceso()) {
-      return res.status(409).json({ 
-        mensaje: 'Ya hay una sincronización en curso', 
-        estado: 'en_proceso' 
-      });
-    }
-    
-    // Iniciar sincronización en segundo plano
-    console.log(`Iniciando sincronización manual ${forzarCompleta ? 'completa' : 'incremental'}...`);
-    
-    // Responder inmediatamente y continuar con la sincronización en segundo plano
-    res.status(202).json({ 
-      mensaje: `Sincronización ${forzarCompleta ? 'completa' : 'incremental'} iniciada`, 
-      estado: 'iniciada' 
-    });
-    
-    // Ejecutar la sincronización después de enviar la respuesta
-    sincronizacionService.sincronizarDatos(forzarCompleta)
-      .then(() => {
-        console.log('Sincronización manual completada exitosamente');
-      })
-      .catch((error) => {
-        console.error('Error en sincronización manual:', error);
-      });
-      
-  } catch (error: any) {
-    console.error('Error al iniciar sincronización manual:', error);
-    res.status(500).json({ mensaje: 'Error al iniciar sincronización', error: error.message });
-  }
-}
+const authMiddleware = new AuthMiddleware();
 
-// Manejador para GET /estado
-function obtenerEstadoSincronizacion(req: express.Request, res: express.Response) {
-  try {
-    const estado = {
-      enProceso: sincronizacionService.estaEnProceso(),
-      ultimaSincronizacion: sincronizacionService.getUltimaSincronizacion(),
-      programada: process.env.ENABLE_SYNC === 'true',
-      expresionCron: process.env.SYNC_CRON_EXPRESSION || '*/30 * * * *'
-    };
-    
-    res.json(estado);
-  } catch (error: any) {
-    console.error('Error al obtener estado de sincronización:', error);
-    res.status(500).json({ mensaje: 'Error al obtener estado', error: error.message });
-  }
-}
+router.get(
+  "/contabilidad/estado",
+  authMiddleware.verifyToken.bind(authMiddleware),
+  sincronizacionController.obtenerEstadoExportacion.bind(
+    sincronizacionController
+  )
+);
 
-// Definir las rutas usando aserción de tipo para evitar errores de TypeScript
-(router as any).post('/iniciar', iniciarSincronizacion);
-(router as any).get('/estado', obtenerEstadoSincronizacion);
+router.post(
+  "/contabilidad/iniciar",
+  authMiddleware.verifyToken.bind(authMiddleware),
+  sincronizacionController.iniciarSincronizacion.bind(sincronizacionController)
+);
 
-// Rutas para exportación de contabilidad
-(router as any).post('/contabilidad/exportar', iniciarExportacionContable);
-(router as any).get('/contabilidad/estado', obtenerEstadoExportacion);
+router.get(
+  "/contabilidad/historial",
+  authMiddleware.verifyToken.bind(authMiddleware),
+  sincronizacionController.obtenerHistorialSincronizacion.bind(
+    sincronizacionController
+  )
+);
+
+router.get("/contabilidad/progress-stream", (req, res) => {
+  // Usar el método del repositorio para suscribir al cliente a las actualizaciones
+  sincronizacionController.suscribirseActualizacionesProgreso(req, res);
+});
+router.post(
+  "/contabilidad/pausar",
+  authMiddleware.verifyToken.bind(authMiddleware),
+  sincronizacionController.pausarSincronizacion.bind(sincronizacionController)
+);
+
+router.post(
+  "/contabilidad/detener",
+  authMiddleware.verifyToken.bind(authMiddleware),
+  sincronizacionController.detenerSincronizacion.bind(sincronizacionController)
+);
 
 export default router;

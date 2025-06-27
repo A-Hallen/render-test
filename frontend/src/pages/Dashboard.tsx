@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { CaptacionesCard } from "../components/dashboard/CaptacionesCard";
 import { ApexIndicadoresChart } from "../features/dashboard/ApexIndicadoresChart";
-import { CarteraCreditoCard } from "../components/dashboard/CarteraCreditoCard";
 import { useOficinas } from "../context/DataContext";
+import { CardsSection } from "../components/dashboard/CardsSection";
 
 export const Dashboard: React.FC = () => {
   const { oficinas, oficinaSeleccionada, setOficinaSeleccionada, fetchOficinasIfNeeded } = useOficinas();
@@ -66,9 +65,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap gap-4">
-        <CarteraCreditoCard codigoOficina={codigoOficina} />
-        <CaptacionesCard tipo="vista" codigoOficina={codigoOficina} />
-        <CaptacionesCard tipo="plazo" codigoOficina={codigoOficina} />
+        <CardsSection/>
       </div>
 
       <div className="space-y-4">

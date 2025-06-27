@@ -9,6 +9,7 @@ import { NotificationSettings } from '../pages/settings/NotificationSettings';
 import { ThresholdsSettings } from '../pages/settings/ThresholdsSettings';
 import { DataSourceSettings } from '../pages/settings/DataSourceSettings';
 import { CooperativaConfig } from '../components/settings/cooperativa';
+import { DashboardSettings } from '../pages/settings/DashboardSettings';
 
 export const Settings: React.FC = () => {
   const {user} = useAuth();
@@ -21,13 +22,14 @@ export const Settings: React.FC = () => {
   return (
     <div className="container mx-auto">
       <div className="rounded-lg overflow-hidden">
-        <div className="p-6 overflow-auto">
+        <div className="">
           <Routes>
                 {user?.role === UserRole.ADMIN && (
                   <Route path="general" element={<CooperativaConfig canEditCooperativa={user?.role === UserRole.ADMIN} />} />
                 )}
                 <Route path="indicadores" element={<KpiFormulaEditor />} />
                 <Route path="user" element={<UserManagement />} />
+                <Route path="dashboard" element={<DashboardSettings />} />
                 <Route path="security" element={<SecuritySettings />} />
                 <Route path="notifications" element={<NotificationSettings />} />
                 <Route path="thresholds" element={<ThresholdsSettings />} />

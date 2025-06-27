@@ -32,9 +32,7 @@ export const UserManagement: React.FC = () => {
         if (!token) {
           throw new Error('No hay token de autenticación');
         }
-        console.log("token", token);
-        const data = await authService.getAllUsers(token);
-        console.log("data", data)
+        const data = await authService.getAllUsers();
         setUsers(data);
       } catch (error: any) {
         console.error('Error al cargar usuarios:', error);

@@ -1,4 +1,4 @@
-import { SaldosContables } from '../saldosContables/saldos.model';
+import { DashboardData } from 'shared';
 import { SaldosRepository } from '../saldosContables/saldos.repository';
 import { FechasSaldosService } from './fechas-saldos.service';
 
@@ -26,20 +26,7 @@ export abstract class SaldosBaseRepository {
     codigoOficina: string,
     codigosCuenta: string[],
     nombreRepositorio: string
-  ): Promise<{
-    fecha: string;
-    monto: number;
-    fechaAnterior?: string;
-    montoAnterior?: number;
-    variacion?: number;
-    variacionPorcentaje?: number;
-    descripcionComparacion?: string;
-    // Comparación con día anterior
-    fechaDiaAnterior?: string;
-    montoDiaAnterior?: number;
-    variacionDiaria?: number;
-    variacionPorcentajeDiaria?: number;
-  } | null> {
+  ): Promise<DashboardData | null> {
     try {
       console.log(`[${nombreRepositorio}] Obteniendo saldos contables para oficina ${codigoOficina}`);
       

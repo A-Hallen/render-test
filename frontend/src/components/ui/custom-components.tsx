@@ -22,7 +22,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   selected,
   onChange,
   className = '',
-  dateFormat = 'dd/MM/yyyy',
   maxDate,
   minDate,
   placeholderText

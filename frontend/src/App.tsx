@@ -10,7 +10,6 @@ import { Loans } from './pages/Loans';
 import { Members } from './pages/Members';
 import { Deposits } from './pages/Deposits';
 import { Visualizacion3D } from './pages/Visualizacion3D';
-import { Sincronizacion } from './pages/Sincronizacion';
 import { IndicadoresContables } from './pages/IndicadoresContables';
 import { IndicadoresFinancierosComparacion } from './pages/IndicadoresFinancierosComparacion';
 import Profile from './pages/Profile';
@@ -22,6 +21,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Login } from './pages/Login';
 import { VerifyEmail } from './pages/VerifyEmail';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import Sincronizacion from './pages/Sincronizacion';
 
 function App() {
   return (

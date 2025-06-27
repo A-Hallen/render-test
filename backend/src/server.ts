@@ -9,8 +9,6 @@ import oficinasRoutes from './modulos/oficinas/oficinas.routes';
 import indicadoresContablesRoutes from './modulos/indicadores-contables/indicadores-contables.routes';
 import kpiContablesRoutes from './modulos/kpi-contables/kpi-contables.routes';
 import sincronizacionRoutes from './modulos/sincronizacion/sincronizacion.routes';
-import carteraCreditoRoutes from './modulos/cartera-credito/cartera-credito.routes';
-import captacionesRoutes from './modulos/captaciones/captaciones.routes';
 import cooperativaRoutes from './modulos/cooperativa/cooperativa.routes';
 // El módulo de indicadores original ha sido eliminado como parte de la refactorización
 import { ValidationError } from 'sequelize';
@@ -19,7 +17,9 @@ import { sincronizacionService } from './database/SincronizacionService';
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 import './config/firebase.config';
-
+import cuentasContablesRoutes from './modulos/cuentas-contables/cuentas-contables.routes';
+import userSettingsRoutes from './modulos/user-settings/user-settings.routes';
+import dashboardRoutes from './modulos/dashboard/dashboard.routes';
 // Middleware para parsear JSON
 app.use(express.json());
 
@@ -39,10 +39,10 @@ app.use('/api/indicadores-contables', indicadoresContablesRoutes);
 app.use('/api/kpi-contables', kpiContablesRoutes);
 app.use('/api/chat', iaRoutes);
 app.use('/api/sincronizacion', sincronizacionRoutes);
-app.use('/api/cartera-credito', carteraCreditoRoutes);
-app.use('/api/captaciones', captacionesRoutes);
 app.use('/api/cooperativa', cooperativaRoutes);
-
+app.use('/api/cuentas-contables', cuentasContablesRoutes);
+app.use('/api/user-settings', userSettingsRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 // Redirección temporal para mantener compatibilidad con código existente
 // Esta ruta debe eliminarse una vez que todas las referencias hayan sido actualizadas
 app.use('/api/indicadores', (req, res, next) => {

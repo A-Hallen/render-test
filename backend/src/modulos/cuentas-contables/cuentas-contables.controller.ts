@@ -52,6 +52,34 @@ export class CuentasContablesController {
     }
   };
 
+  obtenerCuentasPorNombres = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { nombre } = req.query;
+      
+      if (!nombre) {
+        res.status(400).json({
+          success: false,
+          message: 'Se requiere un nombre'
+        });
+        return;
+      }
+      
+      const cuentas = await this.service.obtenerCuentasPorNombre(nombre as string);
+      
+      res.status(200).json({
+        success: true,
+        cuentas
+      });
+    } catch (error: any) {
+      console.error('Error al obtener cuentas por nombre:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener cuentas por nombre',
+        error: error.message || 'Error desconocido'
+      });
+    }
+  };
+
   /**
    * Obtiene cuentas contables específicas por sus códigos
    */
