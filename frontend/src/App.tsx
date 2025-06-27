@@ -22,6 +22,7 @@ import { Login } from './pages/Login';
 import { VerifyEmail } from './pages/VerifyEmail';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import Sincronizacion from './pages/Sincronizacion';
+import ComparacionOficinas from './pages/analisis/ComparacionOficinas';
 
 function App() {
   return (
@@ -51,7 +52,8 @@ function App() {
                   <Route path="/visualizacion-3d" element={<Visualizacion3D />} />
                   <Route path="/sincronizacion" element={<Sincronizacion />} />
                   <Route path="/indicadores-contables" element={<IndicadoresContables />} />
-                  <Route path="/indicadores-comparacion" element={<IndicadoresFinancierosComparacion />} />
+                  {/* <Route path="/indicadores-comparacion" element={<IndicadoresFinancierosComparacion />} /> */}
+                  <Route path="/indicadores-comparacion" element={<ComparacionOficinas />} />
                   <Route path="/settings/*" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications-test" element={<NotificationsTest />} />

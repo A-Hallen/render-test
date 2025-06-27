@@ -9,5 +9,5 @@ router.get('/promedio', kpiContablesController.obtenerPromedioKPIsOficina.bind(k
 router.get('/rango-fechas', kpiContablesController.obtenerKPIsPorOficinaRangosFecha.bind(kpiContablesController));
 router.get('/indicador', kpiContablesController.obtenerKPIEspecifico.bind(kpiContablesController));
 router.get('/comparar-oficinas', kpiContablesController.compararKPIsEntreOficinas.bind(kpiContablesController));
-
+router.get('/comparar-indicadores', kpiContablesController.compararOficinasPorKpis.bind(kpiContablesController));
 export default router;

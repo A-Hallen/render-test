@@ -39,8 +39,11 @@ export class KPIContablesService {
      * @returns Objeto con el KPI solicitado o null si no existe
      */
     async obtenerKPIEspecifico(oficina: string, idIndicador: string, fecha: string) {
-        console.log("[service] Obteniendo KPI específico...");
         return await this.kpiContablesRepository.obtenerKPIEspecifico(oficina, idIndicador, fecha);
+    }
+
+    async compararOficinasPorKpis(fecha: string) {
+        return await this.kpiContablesRepository.compararOficinasPorKpis(fecha);
     }
 
     /**
@@ -51,7 +54,6 @@ export class KPIContablesService {
      * @returns Objeto con la comparación de KPIs entre las dos oficinas
      */
     async compararKPIsEntreOficinas(oficina1: string, oficina2: string, fecha: string) {
-        console.log(`[service] Comparando KPIs entre oficinas ${oficina1} y ${oficina2} para la fecha ${fecha}...`);
         return await this.kpiContablesRepository.compararKPIsEntreOficinas(oficina1, oficina2, fecha);
     }
 }

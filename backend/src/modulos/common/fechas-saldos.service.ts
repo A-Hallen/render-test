@@ -33,8 +33,6 @@ export class FechasSaldosService {
       saldoMesAnterior: SaldosContables | null;
     }> {
     try {
-      console.log(`[${nombreRepositorio}] Obteniendo saldos contables para oficina ${codigoOficina}`);
-      
       // Inicializar el objeto de resultado
       const resultado = {
         saldoActual: null as SaldosContables | null,

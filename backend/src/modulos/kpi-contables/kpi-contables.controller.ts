@@ -8,6 +8,26 @@ export class KPIContablesController {
         this.kpiContablesService = new KPIContablesService();
     }
 
+    async compararOficinasPorKpis(req: Request, res: Response): Promise<void> {
+        try {
+            const fecha = req.query.fecha as string;
+            const comparacion = await this.kpiContablesService.compararOficinasPorKpis(fecha);
+
+            res.status(200).json({
+                status: "success",
+                message: "Comparación de oficinas por KPIs exitosa",
+                data: comparacion
+            });
+        } catch (error: any) {
+            console.error("[Controller] Error al comparar oficinas por KPIs:", error);
+            res.status(500).json({ 
+                status: "error",
+                message: 'Error al comparar oficinas por KPIs', 
+                data: error.message 
+            });
+        }
+    }
+
     /**
      * Compara los KPIs entre dos oficinas para una fecha específica
      * @param req Request con parámetros de consulta (oficina1, oficina2, fecha)

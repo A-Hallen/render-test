@@ -1,6 +1,12 @@
 import { devolverKPIsPorOficinaRangoFechas } from "./transformers/devolverKPIsPorOficinaRangoFechas";
 import { IndicadoresContablesRepository } from "../indicadores-contables/indicadores-contables.repository";
 import { KPICalculado } from "./interfaces/KPICalculado.interface";
+import { OficinasRepository } from "../oficinas/oficinas.repository";
+import {
+  ComparacionOficinasData,
+  IndicadorComparacionOficinasDTO,
+  ValorComparacionOficinasIndicadorDTO,
+} from "shared";
 
 // Definimos localmente la interfaz necesaria para evitar problemas de importación
 interface IndicadorColor {
@@ -22,9 +28,11 @@ interface ComparacionKPIs {
 
 export class KPIContablesRepository {
   indicadoresRepository: IndicadoresContablesRepository;
+  oficinasRepository: OficinasRepository;
 
   constructor() {
     this.indicadoresRepository = new IndicadoresContablesRepository();
+    this.oficinasRepository = new OficinasRepository();
   }
 
   async obtenerPromedioKPIsOficina(
@@ -67,12 +75,16 @@ export class KPIContablesRepository {
     mensaje?: string;
   }> {
     try {
-      console.log(`[KPIContablesRepository] Obteniendo KPIs para oficina: ${oficina}, desde: ${fechaInicio}, hasta: ${fechaFin}`);
-      
+      console.log(
+        `[KPIContablesRepository] Obteniendo KPIs para oficina: ${oficina}, desde: ${fechaInicio}, hasta: ${fechaFin}`
+      );
+
       // Obtener todos los indicadores configurados
       const indicadores = await this.indicadoresRepository.obtenerTodos();
-      console.log(`[KPIContablesRepository] Se encontraron ${indicadores.length} indicadores configurados`);
-      
+      console.log(
+        `[KPIContablesRepository] Se encontraron ${indicadores.length} indicadores configurados`
+      );
+
       // Obtener los KPIs calculados
       const resultado = await devolverKPIsPorOficinaRangoFechas(
         indicadores,
@@ -80,27 +92,29 @@ export class KPIContablesRepository {
         fechaInicio,
         fechaFin
       );
-      
+
       // Extraer los colores de los indicadores para facilitar la visualización
       const indicadoresColor: IndicadorColor[] = indicadores.map((i) => {
         return { id: i.id, nombre: i.nombre, color: i.color };
       });
-      
+
       console.log(`[KPIContablesRepository] KPIs calculados correctamente`);
-      
+
       return {
         indicadores: indicadoresColor,
         kpisCalculados: resultado.kpisCalculados,
-        mensaje: 'KPIs calculados correctamente'
+        mensaje: "KPIs calculados correctamente",
       };
     } catch (error: any) {
-      console.error(`[KPIContablesRepository] Error al obtener KPIs: ${error.message}`);
-      
+      console.error(
+        `[KPIContablesRepository] Error al obtener KPIs: ${error.message}`
+      );
+
       // En caso de error, devolver una estructura vacía pero válida
       return {
         indicadores: [],
         kpisCalculados: {},
-        mensaje: `Error al obtener KPIs: ${error.message}`
+        mensaje: `Error al obtener KPIs: ${error.message}`,
       };
     }
   }
@@ -122,20 +136,26 @@ export class KPIContablesRepository {
     mensaje?: string;
   }> {
     try {
-      console.log(`[KPIContablesRepository] Obteniendo KPI específico para oficina: ${oficina}, indicador: ${idIndicador}, fecha: ${fecha}`);
-      
+      console.log(
+        `[KPIContablesRepository] Obteniendo KPI específico para oficina: ${oficina}, indicador: ${idIndicador}, fecha: ${fecha}`
+      );
+
       // Obtener el indicador solicitado
-      const indicador = await this.indicadoresRepository.obtenerPorId(idIndicador);
-      
+      const indicador = await this.indicadoresRepository.obtenerPorId(
+        idIndicador
+      );
+
       if (!indicador) {
-        console.log(`[KPIContablesRepository] No se encontró el indicador con ID: ${idIndicador}`);
+        console.log(
+          `[KPIContablesRepository] No se encontró el indicador con ID: ${idIndicador}`
+        );
         return {
           indicador: null,
           kpi: null,
-          mensaje: `No se encontró el indicador con ID: ${idIndicador}`
+          mensaje: `No se encontró el indicador con ID: ${idIndicador}`,
         };
       }
-      
+
       // Obtener los KPIs calculados para esa fecha
       const resultado = await devolverKPIsPorOficinaRangoFechas(
         [indicador],
@@ -143,57 +163,141 @@ export class KPIContablesRepository {
         fecha,
         fecha
       );
-      
+
       // Verificar si hay resultados para la fecha solicitada
       if (!resultado.kpisCalculados || !resultado.kpisCalculados[fecha]) {
-        console.log(`[KPIContablesRepository] No hay KPIs calculados para la fecha: ${fecha}`);
+        console.log(
+          `[KPIContablesRepository] No hay KPIs calculados para la fecha: ${fecha}`
+        );
         return {
           indicador: {
             id: indicador.id,
             nombre: indicador.nombre,
-            color: indicador.color
+            color: indicador.color,
           },
           kpi: null,
-          mensaje: `No hay datos disponibles para el indicador en la fecha solicitada`
+          mensaje: `No hay datos disponibles para el indicador en la fecha solicitada`,
         };
       }
-      
+
       // Buscar el KPI específico
       const kpiEncontrado = resultado.kpisCalculados[fecha].find(
-        kpi => kpi.idIndicador.toString() === idIndicador && kpi.codigoOficina.toString() === oficina
+        (kpi) =>
+          kpi.idIndicador.toString() === idIndicador &&
+          kpi.codigoOficina.toString() === oficina
       );
-      
+
       if (!kpiEncontrado) {
-        console.log(`[KPIContablesRepository] No se encontró el KPI específico`);
+        console.log(
+          `[KPIContablesRepository] No se encontró el KPI específico`
+        );
         return {
           indicador: {
             id: indicador.id,
             nombre: indicador.nombre,
-            color: indicador.color
+            color: indicador.color,
           },
           kpi: null,
-          mensaje: `No se encontró el KPI para el indicador ${indicador.nombre} en la fecha ${fecha}`
+          mensaje: `No se encontró el KPI para el indicador ${indicador.nombre} en la fecha ${fecha}`,
         };
       }
-      
+
       console.log(`[KPIContablesRepository] KPI encontrado correctamente`);
-      
+
       return {
         indicador: {
           id: indicador.id,
           nombre: indicador.nombre,
-          color: indicador.color
+          color: indicador.color,
         },
         kpi: kpiEncontrado,
-        mensaje: 'KPI obtenido correctamente'
+        mensaje: "KPI obtenido correctamente",
       };
     } catch (error: any) {
-      console.error(`[KPIContablesRepository] Error al obtener KPI específico: ${error.message}`);
-      
+      console.error(
+        `[KPIContablesRepository] Error al obtener KPI específico: ${error.message}`
+      );
+
       return {
         indicador: null,
         kpi: null,
-        mensaje: `Error al obtener el KPI: ${error.message}`
+        mensaje: `Error al obtener el KPI: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Compara los KPIs de un indicador específico entre múltiples oficinas para una fecha determinada.
+   * @param indicadorId El ID del indicador a comparar.
+   * @param filtros Los filtros de comparación, incluyendo las oficinas y la fecha.
+   * @returns Un objeto DatosComparacion que contiene la definición del indicador y los valores del indicador para cada oficina.
+   */
+  async compararOficinasPorKpis(
+    fecha: string
+  ): Promise<ComparacionOficinasData> {
+    try {
+      console.log(
+        `[KPIContablesRepository] Comparando KPI entre oficinas para la fecha: ${fecha}`
+      );
+
+      const oficinas = await this.oficinasRepository.obtenerTodos();
+      const codigosOficinas = oficinas.map((oficina) => oficina.codigo);
+      const indicadores = await this.indicadoresRepository.obtenerTodos();
+
+      if (!indicadores) {
+        console.log(`[KPIContablesRepository] No se encontraron indicadores`);
+        return {
+          indicadores: [],
+          valores: [],
+        };
+      }
+
+      const indicadoresData: IndicadorComparacionOficinasDTO[] = [];
+      const valoresComparacion: ValorComparacionOficinasIndicadorDTO[] = [];
+
+
+      for (const indicador of indicadores) {
+        const indicadorId = indicador.id;
+        const indicadorDTO: IndicadorComparacionOficinasDTO = {
+          id: indicador.id,
+          nombre: indicador.nombre,
+          descripcion: indicador.descripcion,
+          color: indicador.color,
+        };
+        indicadoresData.push(indicadorDTO);
+
+
+        for (const oficinaCodigo of codigosOficinas) {
+          const resultado = await devolverKPIsPorOficinaRangoFechas(
+            [indicador],
+            oficinaCodigo,
+            fecha,
+            fecha
+          );
+
+            valoresComparacion.push({
+              oficinaCodigo: oficinaCodigo,
+              indicadorId: indicadorId,
+              valor: resultado.kpisCalculados[fecha][0].valor,
+              fecha: fecha,
+            });
+        }
+
+        console.log(
+          `[KPIContablesRepository] Comparación de KPI ${indicadorId} completada.`
+        );
+      }
+      return {
+        indicadores: indicadoresData,
+        valores: valoresComparacion,
+      };
+    } catch (error: any) {
+      console.error(
+        `[KPIContablesRepository] Error al comparar KPIs entre oficinas: ${error.message}`
+      );
+      return {
+        indicadores: [],
+        valores: [],
       };
     }
   }
@@ -211,12 +315,16 @@ export class KPIContablesRepository {
     fecha: string
   ): Promise<ComparacionKPIs> {
     try {
-      console.log(`[KPIContablesRepository] Comparando KPIs entre oficinas: ${oficina1} y ${oficina2}, fecha: ${fecha}`);
-      
+      console.log(
+        `[KPIContablesRepository] Comparando KPIs entre oficinas: ${oficina1} y ${oficina2}, fecha: ${fecha}`
+      );
+
       // Obtener todos los indicadores configurados
       const indicadores = await this.indicadoresRepository.obtenerTodos();
-      console.log(`[KPIContablesRepository] Se encontraron ${indicadores.length} indicadores configurados`);
-      
+      console.log(
+        `[KPIContablesRepository] Se encontraron ${indicadores.length} indicadores configurados`
+      );
+
       // Obtener los KPIs para la primera oficina
       const resultadoOficina1 = await devolverKPIsPorOficinaRangoFechas(
         indicadores,
@@ -224,7 +332,7 @@ export class KPIContablesRepository {
         fecha,
         fecha
       );
-      
+
       // Obtener los KPIs para la segunda oficina
       const resultadoOficina2 = await devolverKPIsPorOficinaRangoFechas(
         indicadores,
@@ -232,14 +340,14 @@ export class KPIContablesRepository {
         fecha,
         fecha
       );
-      
+
       // Extraer los colores de los indicadores para facilitar la visualización
       const indicadoresColor: IndicadorColor[] = indicadores.map((i) => {
         return { id: i.id, nombre: i.nombre, color: i.color };
       });
-      
+
       console.log(`[KPIContablesRepository] Comparación de KPIs completada`);
-      
+
       return {
         indicadores: indicadoresColor,
         kpisOficina1: resultadoOficina1.kpisCalculados,
@@ -247,11 +355,13 @@ export class KPIContablesRepository {
         fecha: fecha,
         nombreOficina1: oficina1,
         nombreOficina2: oficina2,
-        mensaje: 'Comparación de KPIs completada correctamente'
+        mensaje: "Comparación de KPIs completada correctamente",
       };
     } catch (error: any) {
-      console.error(`[KPIContablesRepository] Error al comparar KPIs: ${error.message}`);
-      
+      console.error(
+        `[KPIContablesRepository] Error al comparar KPIs: ${error.message}`
+      );
+
       // En caso de error, devolver una estructura vacía pero válida
       return {
         indicadores: [],
@@ -260,7 +370,7 @@ export class KPIContablesRepository {
         fecha: fecha,
         nombreOficina1: oficina1,
         nombreOficina2: oficina2,
-        mensaje: `Error al comparar KPIs: ${error.message}`
+        mensaje: `Error al comparar KPIs: ${error.message}`,
       };
     }
   }

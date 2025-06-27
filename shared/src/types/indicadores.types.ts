@@ -52,3 +52,28 @@ export interface IndicadorResponse {
 export interface Component {
     componentes: {coeficiente: number, cuentas: string[]}[];
 }
+
+export interface IndicadorComparacionOficinasDTO {
+    id: string;
+    nombre: string;
+    descripcion: string;
+    color: string;
+}
+
+export interface ValorComparacionOficinasIndicadorDTO {
+    oficinaCodigo: string;
+    indicadorId: string;
+    valor: number;
+    fecha: string;
+}
+
+export interface ComparacionOficinasData {
+    indicadores: IndicadorComparacionOficinasDTO[];
+    valores: ValorComparacionOficinasIndicadorDTO[];
+}
+
+export interface ComparacionOficinasResponse {
+    status: "success" | "error";
+    message: string;
+    data?: ComparacionOficinasData;
+}
