@@ -1,4 +1,4 @@
-import { devolverKPIsPorOficinaRangoFechas } from "./transformers/devolverKPIsPorOficinaRangoFechas";
+import { devolverKPIsPorOficinaRangoFechas, devolverKPIsPorOficinaYFecha } from "./transformers/devolverKPIsPorOficinaRangoFechas";
 import { IndicadoresContablesRepository } from "../indicadores-contables/indicadores-contables.repository";
 import { KPICalculado } from "./interfaces/KPICalculado.interface";
 import { OficinasRepository } from "../oficinas/oficinas.repository";
@@ -7,6 +7,7 @@ import {
   IndicadorComparacionOficinasDTO,
   ValorComparacionOficinasIndicadorDTO,
 } from "shared";
+import { IndicadorContable } from "../indicadores-contables/interfaces/IndicadorContable.interface";
 
 // Definimos localmente la interfaz necesaria para evitar problemas de importación
 interface IndicadorColor {
@@ -228,7 +229,6 @@ export class KPIContablesRepository {
 
   /**
    * Compara los KPIs de un indicador específico entre múltiples oficinas para una fecha determinada.
-   * @param indicadorId El ID del indicador a comparar.
    * @param filtros Los filtros de comparación, incluyendo las oficinas y la fecha.
    * @returns Un objeto DatosComparacion que contiene la definición del indicador y los valores del indicador para cada oficina.
    */
@@ -255,6 +255,34 @@ export class KPIContablesRepository {
       const indicadoresData: IndicadorComparacionOficinasDTO[] = [];
       const valoresComparacion: ValorComparacionOficinasIndicadorDTO[] = [];
 
+      const resultado = await devolverKPIsPorOficinaYFecha(
+        indicadores,
+        fecha
+      );
+
+      for (const indicador of indicadores) {
+        const indicadorDTO: IndicadorComparacionOficinasDTO = {
+          id: indicador.id,
+          nombre: indicador.nombre,
+          descripcion: indicador.descripcion,
+          color: indicador.color,
+        };
+        indicadoresData.push(indicadorDTO);
+      }
+
+      for( const kpi of resultado.kpisCalculados[fecha]){
+        valoresComparacion.push({
+          oficinaCodigo: kpi.codigoOficina,
+          indicadorId: kpi.idIndicador,
+          valor: kpi.valor,
+          fecha: kpi.fecha
+        })
+      }
+
+      return {
+        indicadores: indicadoresData,
+        valores: valoresComparacion,
+      };
 
       for (const indicador of indicadores) {
         const indicadorId = indicador.id;

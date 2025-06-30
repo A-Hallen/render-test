@@ -16,7 +16,7 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
    */
   private obtenerFechasFinDeMes(fechaInicio: Date, fechaFin: Date): Date[] {
     const fechas: Date[] = [];
-    if(fechaInicio.getTime() === fechaFin.getTime()){
+    if (fechaInicio.getTime() === fechaFin.getTime()) {
       fechas.push(fechaInicio);
       return fechas;
     }
@@ -60,6 +60,32 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
     }
 
     return fechas;
+  }
+
+  async obtenerSaldosPorFecha(
+    fecha: Date,
+    codigosCuentas: string[]
+  ): Promise<SaldosContables[]> {
+    try {
+      const lotesCuentas = this.crearLotes(codigosCuentas, 30);
+      const promesasConsultas: Promise<SaldosContables[]>[] = [];
+
+      for (const loteCuentas of lotesCuentas) {
+        const query = firestore()
+          .collection("SaldosContables")
+          .where("codigoCuentaContable", "in", loteCuentas)
+          .where("fecha", "==", fecha.toISOString().split("T")[0]);
+
+        const consulta = this.ejecutarConsulta(query);
+        promesasConsultas.push(consulta);
+      }
+
+      const resultadosLotes = await Promise.all(promesasConsultas);
+      return resultadosLotes.flat();
+    } catch (error) {
+      console.error("Error al obtener saldos por oficinas y fecha:", error);
+      throw error;
+    }
   }
 
   /**
@@ -130,7 +156,10 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
 
         // Calcular el tamaño máximo de lote de cuentas basado en el número de fechas
         // Asegurando que cuentas + fechas <= 30
-        const tamanoMaximoLote = Math.max(1, Math.floor(30 / timestampsFechas.length));
+        const tamanoMaximoLote = Math.max(
+          1,
+          Math.floor(30 / timestampsFechas.length)
+        );
         const lotesCuentas = this.crearLotes(codigosCuentas, tamanoMaximoLote);
 
         // Crear una promesa para cada lote de cuentas
@@ -148,7 +177,7 @@ export class SaldosRepository extends BaseFirebaseRepository<SaldosContables> {
 
       // Esperar a que todas las promesas se resuelvan en paralelo
       const resultadosLotes = await Promise.all(promesasConsultas);
-      
+
       // Combinar todos los resultados en un solo array
       return resultadosLotes.flat();
     } catch (error) {

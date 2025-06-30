@@ -7,7 +7,6 @@ import {
   TablaComparacion,
   MensajesEstado,
   ListaDetallesIndicadores,
-  FiltrosComparacion as FiltrosComparacionType,
   IndicadorFinanciero,
   ComparacionData,
   formatearFechaParaInput,
